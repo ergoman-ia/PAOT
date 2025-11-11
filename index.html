@@ -824,9 +824,6 @@
     let currentJobType = '';
 
     document.addEventListener('DOMContentLoaded', function() {
-
-        loadGlobalCache();
-
         const checklistBody = document.getElementById('checklist-body');
         const categoryButtonsContainer = document.getElementById('category-buttons');
         const checkboxMap = new Map();
@@ -1982,6 +1979,8 @@ if(applyAiConfigBtn) {
     });
 }
 // AI_SCRIPT_END
+		
+        loadGlobalCache();		
 });
 </script>
 
