@@ -18,10 +18,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # 사용자용 HTML 파일에서만 API 키를 교체합니다.
+      # 사용자용 HTML 파일(index.html)에서만 API 키를 교체합니다.
       - name: Replace API Key in User File
         run: |
-          sed -i "s|__GEMINI_API_KEY__|${{ secrets.GEMINI_API_KEY }}|g"index.html
+          find . -name "index.html" -exec sed -i "s|__GEMINI_API_KEY__|${{ secrets.GEMINI_API_KEY }}|g" {} +
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
 
