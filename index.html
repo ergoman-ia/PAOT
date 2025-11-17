@@ -433,7 +433,7 @@
                         <button id="generate-btn">체크포인트(인쇄용) 생성</button>
                         <hr class="dropdown-divider">
                         <hr class="dropdown-divider">
-                        <button id="ai-config-btn">AI 맞춤 업종&작업별 설문 생성</button>
+                        <button id="ai-config-btn">AI 맞춤 업종&직종별 설문 생성</button>
                         <button id="show-cache-list-btn">기 생성된 체크포인트 목록</button>
                     </div>
                     <input type="file" id="csv-file-input" accept=".csv" style="display: none;">
@@ -545,10 +545,10 @@
                     </ul>
                 </li>
                 <li style="margin-bottom: 10px;" class="ai-manual-only">
-                    <strong>AI 맞춤 업종&작업별 설문 생성:</strong>
+                    <strong>AI 맞춤 업종&직종별 설문 생성:</strong>
                     <ul style="list-style-type: circle; padding-left: 20px; margin-top: 5px;">
-                        <li>'업종' (예: 건설업)과 '작업내용' (예: 용접)을 입력하면, AI가 3~5분간 작업을 수행합니다.</li>
-                        <li>완료되면, 입력한 업종/작업에 맞게 <strong>모든 문항(132개)이 재작성된</strong> 새로운 HTML 파일이 PC에 다운로드됩니다.</li>
+                        <li>'업종' (예: 건설업)과 '직종' (예: 용접공)을 입력하면, AI가 3~5분간 작업을 수행합니다.</li>
+                        <li>완료되면, 입력한 업종/직종에 맞게 <strong>모든 문항(132개)이 재작성된</strong> 새로운 HTML 파일이 PC에 다운로드됩니다.</li>
                         <li>이후에는 다운로드한 새 HTML 파일을 열어서 '맞춤형' 설문을 사용하시면 됩니다.</li>
                     </ul>
                 </li>
@@ -563,18 +563,18 @@
 <div id="aiConfigModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>AI 맞춤 업종&작업별 체크포인트 생성</h3>
+                <h3>AI 맞춤 업종&직종별 체크포인트 생성</h3>
                 <button id="closeAiConfigModal" class="modal-close">&times;</button>
             </div>
 	<div class="modal-body">
-                <p style="color: blue">업종과 작업내용을 입력하시면, AI가 현재 체크포인트를 맞춤형으로 재작성합니다.</p>
+                <p style="color: blue">업종과 직종을 입력하시면, AI가 현재 체크포인트를 맞춤형으로 재작성합니다.</p>
                 <div class="form-group">
                     <label for="industry-input">업종<span style="font-weight: 300; font-size: 14px;"> (예: 건설업, 제조업, 서비스업 또는 화학제품제조업, 선박건조수리업 등 업종 대/중 분류)</span></label>
                     <input type="text" id="industry-input" placeholder="업종을 입력하세요">
                 </div>
                 <div class="form-group">
-                    <label for="job-type-input">작업내용<span style="font-weight: 300; font-size: 14px;"> (예: 용접, 조립, 세척작업, 비계설치해체 등 구체적인 수행 업무)</span></label>
-                    <input type="text" id="job-type-input" placeholder="수행하는 작업내용을 입력하세요">
+                    <label for="job-type-input">직종<span style="font-weight: 300; font-size: 14px;"> (예: 용접공, 부품조립공, 택배배달원, 비계설치해체공 등 구체적인 수행 업무에 따른 직종)</span></label>
+                    <input type="text" id="job-type-input" placeholder="직종을 입력하세요">
                 </div>
                 <div id="ai-error-message" class="error-message"></div>
 
@@ -598,7 +598,7 @@
                         </div>
                     </div>
                 </div>
-                <p id="ai-loading-message" style="color: red; display: none; margin-top: 10px;">입력하신 업종과 작업내용에 적합한 설문문항 전체를 생성하기 때문에 장시간이 걸립니다. 잠시만 기다려 주세요.</p>
+                <p id="ai-loading-message" style="color: red; display: none; margin-top: 10px;">입력하신 업종과 직종에 적합한 설문문항 전체를 생성하기 때문에 장시간이 걸립니다. 잠시만 기다려 주세요.</p>
             </div>
 
             <div class="modal-footer">
@@ -622,7 +622,7 @@
             
             <div class="form-group" style="padding-bottom: 15px; border-bottom: 1px solid #eee; margin-bottom: 10px;">
                 <label for="cache-search-input" style="font-weight: 500;">🔍 목록 내 검색</label>
-                <input type="text" id="cache-search-input" placeholder="업종 또는 작업내용 입력..." style="width: 100%; box-sizing: border-box; font-size: 14px;">
+                <input type="text" id="cache-search-input" placeholder="업종 또는 직종 입력..." style="width: 100%; box-sizing: border-box; font-size: 14px;">
             </div>
             
             <div id="cache-accordion-container" style="overflow-y: auto; flex-grow: 1;">
@@ -1644,7 +1644,7 @@ function loadCacheList() {
 
     for (const industry of sortedIndustries) {
         const items = groupedCache.get(industry);
-        // 작업내용별로 정렬 (가나다순)
+        // 직종별로 정렬 (가나다순)
         items.sort((a, b) => a.jobType.localeCompare(b.jobType));
 
         const detailsElement = document.createElement('details');
@@ -1686,7 +1686,7 @@ function loadCacheList() {
             const itemDiv = document.createElement('div');
             itemDiv.style.cssText = `display: flex; justify-content: space-between; align-items: center; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px; background-color: #fff;`;
 
-            // 작업 내용 텍스트
+            // 직종 텍스트
             const textSpan = document.createElement('span');
             textSpan.textContent = item.jobType;
             textSpan.style.fontWeight = '500';
@@ -1757,7 +1757,7 @@ function openAiModal() {
     currentIndustry = '';
     currentJobType = '';
     aiErrorMessage.textContent = '';
-    aiLoadingMessage.textContent = '입력하신 업종과 작업내용에 적합한 설문문항 전체를 생성하기 때문에 장시간이 걸립니다. 잠시만 기다려 주세요.';
+    aiLoadingMessage.textContent = '입력하신 업종과 직종에 적합한 설문문항 전체를 생성하기 때문에 장시간이 걸립니다. 잠시만 기다려 주세요.';
     aiLoadingMessage.style.color = 'red'; 
     aiLoadingMessage.style.display = 'none';
     industryInput.value = currentIndustry;
@@ -1981,7 +1981,7 @@ if(applyAiConfigBtn) {
             // --- All successful, update UI and data ---
             progressContainer.style.display = 'none'; // 성공 시 진행바 숨기기
             aiLoadingMessage.style.display = 'block';
-            aiLoadingMessage.textContent = '요청하신 업종과 작업내용에 맞춘 체크포인트가 생성되어, HTML 파일로 저장하였습니다.';
+            aiLoadingMessage.textContent = '요청하신 업종과 직종에 맞춘 체크포인트가 생성되어, HTML 파일로 저장하였습니다.';
             aiLoadingMessage.style.color = '#16a34a'; 
             triggerHtmlDownload(expertData, managerData, workerData, industry, jobType);
 
