@@ -1822,7 +1822,7 @@ async function generateReportFromDefault(type) {
     [generateWorkerReportBtn, generateManagerReportBtn, generateExpertReportBtn].forEach(btn => btn.disabled = true);
 
     let systemPrompt, userQuery, responseSchema;
-    const model = 'gemini-2.5-flash-preview-05-20';
+    const model = 'gemini-2.5-flash';
     const industry = currentIndustry || '일반';
     const jobType = currentJobType || '범용';
 
@@ -1908,7 +1908,7 @@ if(applyAiConfigBtn) {
         aiLoadingMessage.style.display = 'block'; 
         progressContainer.style.display = 'block'; // 진행바 컨테이너 보이기
         
-        const model = 'gemini-2.5-flash-preview-05-20';
+        const model = 'gemini-2.5-flash';
 
         try {
             // --- Step 1: Generate Expert Checklist ---
