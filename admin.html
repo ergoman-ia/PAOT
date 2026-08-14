@@ -58,7 +58,7 @@ code{background:#f3f4f6;padding:1px 6px;border-radius:4px;font-size:.85em}
     </div>
     <div class="row">
       <button class="btn" id="connect">연결 확인</button>
-      <button class="btn sec" id="forget-all">저장된 설정 지우기</button>
+      <button class="btn danger" id="logout">🔓 로그아웃</button>
       <span id="mode"></span>
     </div>
   </div>
@@ -70,7 +70,6 @@ code{background:#f3f4f6;padding:1px 6px;border-radius:4px;font-size:.85em}
     <div class="okbox" style="margin:0 0 14px 32px">
       <b>원본은 구글 드라이브 <code>ergonomic-checkpoints-data</code> 폴더입니다.</b><br>
       백업 ZIP은 이 폴더와 <b>파일 이름·내용이 똑같습니다.</b> 압축을 풀어 그대로 되올리면 복구됩니다.
-      <span style="color:#6b7280">가져오기는 GitHub <code>data/</code> 를 읽어 드라이브에 채워 넣는 <b>일회성 복구용</b>이며, 반대 방향으로는 쓰지 않습니다.</span>
     </div>
     <div class="stat">
       <div><b id="stat-n">–</b>등록 직종</div>
@@ -81,7 +80,6 @@ code{background:#f3f4f6;padding:1px 6px;border-radius:4px;font-size:.85em}
     <div class="row">
       <button class="btn sec" id="reload">새로고침</button>
       <button class="btn" id="backup" disabled>📦 전체 백업 (ZIP) 내려받기</button>
-      <button class="btn sec" id="import-seed" disabled>GitHub data/ → 서버로 가져오기</button>
     </div>
   </div>
 
@@ -108,7 +106,6 @@ function slug(i,j){                       // 앱·서버와 동일한 FNV-1a
   return 'cp-'+h.toString(16).padStart(8,'0');
 }
 const today = () => new Date().toISOString().slice(0,10);
-const DATA_DIR = 'data';
 const CFG = 'ergAdminCfg';
 
 let SRV = false;                                   // 서버 모드 여부
@@ -122,8 +119,13 @@ function saveCfg(){
 }
 (function restore(){ const c=cfg(); ['api','atoken'].forEach(k=>{ if(c[k]) $(k).value=c[k]; }); })();
 ['api','atoken'].forEach(k=>$(k).addEventListener('change',saveCfg));
-$('forget-all').addEventListener('click',()=>{ localStorage.removeItem(CFG);
-  ['api','atoken'].forEach(k=>$(k).value=''); log('<u>ⓘ</u> 저장된 설정을 지웠습니다.'); boot(); });
+$('logout').addEventListener('click',()=>{
+  if(!confirm('관리자 모드에서 로그아웃합니다.\n이 브라우저에 저장된 서버 주소와 토큰이 지워집니다.\n계속할까요?')) return;
+  localStorage.removeItem(CFG);
+  ['api','atoken'].forEach(k=>$(k).value='');
+  SRV=false; catalog={version:4,updated:'–',items:[]};
+  location.href='index.html';
+});
 
 /*──────── 서버 통신 ────────*/
 async function post(body){
@@ -160,8 +162,7 @@ async function boot(){
     $('stat-today').textContent = '–';
     catalog = { version:4, updated:'–', items:[] };
   }
-  document.querySelectorAll('.srv-only').forEach(el=>el.classList.toggle('hide', !SRV));
-  $('backup').disabled = !SRV; $('import-seed').disabled = !SRV;
+  $('backup').disabled = !SRV;
   $('backup').title = SRV ? '구글 드라이브의 자료 전체를 ZIP으로 내려받습니다' : '먼저 서버에 연결하세요';
   $('src-note').textContent = SRV ? '구글 드라이브 ergonomic-checkpoints-data 폴더에 저장되어 모든 접속자가 실시간으로 쓰고 있는 자료입니다.'
                                   : '서버에 연결되면 등록 현황이 표시됩니다.';
@@ -201,18 +202,6 @@ $('list').addEventListener('click', async e=>{
 });
 
 /*──────── 서버 전용 기능 ────────*/
-$('import-seed').addEventListener('click', async ()=>{
-  try{
-    const c = await (await fetch(`${DATA_DIR}/catalog.json`)).json();
-    log(`<u>▶</u> GitHub data/ 에서 ${c.items.length}건 읽는 중… → 구글 드라이브로 저장합니다`);
-    const recs = [];
-    for(const it of c.items){ recs.push(await (await fetch(`${DATA_DIR}/${it.f}.json`)).json()); }
-    const r = await adm('import',{records:recs});
-    if(!r.ok) throw new Error(r.error);
-    log(`<b>✔</b> ${r.imported}건을 구글 드라이브에 저장했습니다 (서버 총 ${r.total}건)`);
-    await boot();
-  }catch(e){ log('<s>✖</s> 이관 실패: '+esc(e.message)); }
-});
 /*──────── ZIP 생성 (외부 라이브러리 없음) ────────*/
 const CRC_T = (() => { const t = new Uint32Array(256);
   for (let n=0;n<256;n++){ let c=n; for(let k=0;k<8;k++) c = c&1 ? 0xEDB88320 ^ (c>>>1) : c>>>1; t[n]=c>>>0; }
