@@ -597,7 +597,6 @@ details.adv summary{cursor:pointer;font-size:.88rem;color:#4b5563;font-weight:60
     <div id="cache-accordion-container" style="overflow-y:auto;flex-grow:1"></div>
   </div>
   <div class="modal-footer">
-    <button id="export-cache-btn" class="btn btn-secondary">미등록분 모아서 내보내기</button>
     <button id="okCacheListModal" class="btn btn-primary">확인</button>
   </div>
 </div></div>
@@ -619,10 +618,9 @@ const PRISTINE_HTML = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
 const CONFIG = {
   /* 공용 서버(Google Apps Script) 주소.
      넣으면  → 신규 직종이 자동으로 서버에 등록되어 다음 사람이 즉시 사용. API 키도 서버에 보관.
-     비우면  → 아래 data/ 폴더만 읽는 기존 방식으로 동작 (접속자 제출 → 교수실 반영). */
+     비우면  → 아래 data/ 폴더만 읽는 읽기 전용 방식으로 동작. */
   API_URL: 'https://script.google.com/macros/s/AKfycbyHYYA_zNnRSjWPWmqe9KNQ-zRc8VNEJWbTO7wIojX1HHn3AttzRx3rGI3mb61YmAbrmg/exec',                            // 예: 'https://script.google.com/macros/s/AKfy…/exec'
   DATA_DIR: 'data',                       // 서버가 없거나 응답하지 않을 때 쓰는 예비 자료
-  CONTACT: 'ergoman@kosha.or.kr',        // 서버가 없을 때 신규 생성분을 받을 교수실 주소
   ORG: '산업안전보건교육원'
 };
 /* ═══════════════════════════════════════════════════════════════════ */
@@ -1244,7 +1242,7 @@ function updateSharedStatus(ind, job) {
   const sug = suggestShared(ind, job);
   const howto = SERVER
     ? '공용 자료에 없어 새로 생성합니다 (약 20~40초). 생성되면 <b>공용 목록에 자동 등록</b>되어 다음 이용자부터 바로 쓰입니다.'
-    : `공용 자료에 없어 새로 생성합니다 (약 20~40초). 생성 결과를 ${esc(CONFIG.ORG)}에 보내주시면 다음 이용자부터 즉시 사용합니다.`;
+    : '공용 자료에 없어 새로 생성합니다 (약 20~40초). 공용 서버에 연결되어 있지 않아 <b>이 브라우저에서만</b> 쓰이는 임시본이 됩니다.';
   box.innerHTML = `<span class="chip warn">🆕 신규 직종</span> <span class="mini">${howto}</span>`
     + (sug.length ? `<div class="pill-list">${sug.map(x =>
         `<button class="pill sug-btn" data-i="${esc(x.i)}" data-j="${esc(x.j)}" style="border:1px solid #c7d2fe;cursor:pointer">↩ ${esc(x.i)} / ${esc(x.j)}</button>`).join('')}
@@ -1310,7 +1308,7 @@ $('applyAiConfigBtn').addEventListener('click', async () => {
 
     if ($('opt-norewrite').checked) {
       const flat = {}; BASE.forEach(g => g.checkpoints.forEach(c => flat[c.id] = { t: c.text, i: c.ideas }));
-      saveCache(key, { industry, jobType, expert: flat, managerIds, workerIds });
+      saveIfShared(key, { industry, jobType, expert: flat, managerIds, workerIds }, false);
       finish(flat, managerIds, workerIds, industry, jobType, t0, false);
       return;
     }
@@ -1345,7 +1343,7 @@ $('applyAiConfigBtn').addEventListener('click', async () => {
 
     if (!AI_READY) {
       const flat = {}; BASE.forEach(g => g.checkpoints.forEach(c => flat[c.id] = { t: c.text, i: c.ideas }));
-      saveCache(key, { industry, jobType, expert: flat, managerIds, workerIds });
+      saveIfShared(key, { industry, jobType, expert: flat, managerIds, workerIds }, false);
       finish(flat, managerIds, workerIds, industry, jobType, t0, false);
       return;
     }
@@ -1376,7 +1374,7 @@ $('applyAiConfigBtn').addEventListener('click', async () => {
     results.forEach(r => r.map.forEach((v, id) => { flat[id] = { t: v.text, i: v.ideas }; rewritten++; }));
     glog(`<b>✔</b> 병합 완료 — 재작성 ${rewritten}/132, 원문 유지 ${132 - rewritten}`);
 
-    saveCache(key, { industry, jobType, expert: flat, managerIds, workerIds });
+    saveIfShared(key, { industry, jobType, expert: flat, managerIds, workerIds }, false);
     finish(flat, managerIds, workerIds, industry, jobType, t0, false);
 
   } catch (err) {
@@ -1409,18 +1407,13 @@ function finish(flat, managerIds, workerIds, industry, jobType, t0, fromCache) {
     $('ai-loading-message').innerHTML =
       `✅ 완료 (${secs}초 · ${fromCache} 자료 · AI 호출 0회) — 맞춤형 HTML 파일을 내려받았습니다.`;
   } else {
-    /* 새로 만든 것 — 공유하면 다음 이용자부터 즉시 사용.
-       [주의] 브라우저는 사용자 클릭 없이 파일 2개를 연달아 내려받을 수 없다(크롬이 두 번째를 차단).
-       그래서 등록용 파일은 자동으로 받지 않고, 아래 버튼을 누를 때 받는다. */
-    S.contribution = rec;
+    /* 공용 서버에 등록되지 않은 결과 — 이 화면에서만 쓰는 임시본이다.
+       서버가 살아 있으면 이 분기로 오지 않는다(서버가 생성과 동시에 등록한다). */
+    $('ai-loading-message').style.color = '#b45309';
     $('ai-loading-message').innerHTML =
-      `✅ 완료 (${secs}초) — 맞춤형 HTML 파일을 내려받았습니다.<br>
-       <span class="mini">이 직종은 아직 공용 목록에 없습니다. 아래 버튼을 누르면 등록용 파일이 저장되고 메일 창이 열립니다.
-       보내주시면 <b>다음 이용자부터는 0.5초 만에</b> 같은 자료를 씁니다.</span><br>
-       <button class="btn btn-primary" id="contrib-btn" style="margin-top:8px">📮 등록용 파일 저장 + 메일 쓰기</button>
-       <button class="btn btn-secondary" id="contrib-file-btn" style="margin-top:8px">파일만 저장</button>`;
-    $('contrib-btn').addEventListener('click', () => sendContribution(rec, true));
-    $('contrib-file-btn').addEventListener('click', () => sendContribution(rec, false));
+      `⚠ 완료 (${secs}초) — 맞춤형 HTML 파일을 내려받았습니다.<br>
+       <span class="mini">다만 <b>공용 서버에 등록되지 않았습니다.</b> 지금 화면과 내려받은 파일에서는 정상적으로 쓰실 수 있지만,
+       다른 이용자에게는 보이지 않습니다. 잠시 후 서버가 복구되면 같은 업종·직종으로 한 번 더 생성해 주세요.</span>`;
   }
   $('applyAiConfigBtn').style.display = 'none';
   $('cancelAiConfigBtn').textContent = '확인';
@@ -1431,6 +1424,22 @@ function finish(flat, managerIds, workerIds, industry, jobType, t0, fromCache) {
 const cacheKey = (i, j) => 'ergV2::' + i.trim().toLowerCase() + '::' + j.trim().toLowerCase();
 function readCache(key) { try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : null; } catch (e) { return null; } }
 function saveCache(key, obj) { try { localStorage.setItem(key, JSON.stringify(obj)); } catch (e) { console.warn('캐시 저장 실패(용량)', e); } }
+
+/** 공용 서버에 등록되지 않은 결과는 보관하지 않는다.
+ *  (서버 모드에서 임시본을 남기면 '나에게만 보이는 항목'이 계속 쌓인다) */
+function saveIfShared(key, obj, registered) {
+  if (SERVER && !registered) { console.info('공용 등록되지 않아 보관하지 않습니다:', key); return; }
+  saveCache(key, obj);
+}
+
+/** 서버 카탈로그에 없는 옛 보관본 정리 — 서버 연결이 확인된 경우에만 실행 */
+function pruneOrphanCache() {
+  if (!SERVER) return 0;
+  const live = new Set(CATALOG.map(x => x.k));
+  const gone = allCache().filter(x => !live.has(catKey(x.industry, x.jobType)));
+  gone.forEach(x => { console.info('임시 보관본 정리:', x.industry, '/', x.jobType); localStorage.removeItem(x.key); });
+  return gone.length;
+}
 
 /** v1 default_cache.json(전문가+관리자+작업자 전문) → v2(전문가+ID목록)로 정규화.
  *  관리자용 문장은 버리고 ID만 취하므로 기존 데이터의 문장 변형이 이 단계에서 제거된다. */
@@ -1483,6 +1492,8 @@ async function loadCatalog() {
       if (c && c.ok && Array.isArray(c.items)) {
         CATALOG = c.items; SERVER = { updated: c.updated, count: c.items.length };
         console.log(`공용 서버 연결됨 — ${CATALOG.length}건 (갱신 ${c.updated})`);
+        const n = pruneOrphanCache();
+        if (n) console.log(`서버에 없는 임시 보관본 ${n}건을 정리했습니다.`);
         fillDatalists(); return;
       }
     } catch (e) { console.warn('공용 서버에 연결하지 못해 예비 자료를 사용합니다.', e); }
@@ -1554,27 +1565,6 @@ async function fetchShared(entry) {
   return rec;
 }
 
-/** 신규 생성분을 교수실에 보낼 수 있도록 조각 파일로 저장 */
-function saveContribution(rec) {
-  const name = `${fileId(rec.industry, rec.jobType)}.json`;
-  const payload = { ...rec, source: 'contrib', created: new Date().toISOString().slice(0, 10) };
-  download(new Blob([JSON.stringify(payload)], { type: 'application/json' }), name);
-  return name;
-}
-
-/** 등록 요청 — 반드시 사용자 클릭에서 호출할 것 (자동 다운로드는 브라우저가 차단한다) */
-function sendContribution(rec, openMail) {
-  const file = saveContribution(rec);
-  notify(`등록용 파일 ${file} 을(를) 저장했습니다.`);
-  if (!openMail) return;
-  const subject = `[인간공학 체크포인트] 신규 등록 요청 - ${rec.industry} / ${rec.jobType}`;
-  const body = `${CONFIG.ORG} 담당자님,\n\n아래 직종의 체크포인트를 새로 생성했습니다. 공용 목록에 등록 부탁드립니다.\n\n`
-    + `업종: ${rec.industry}\n직종: ${rec.jobType}\n생성일: ${new Date().toLocaleDateString('ko-KR')}\n\n`
-    + `※ 방금 내려받아진 "${file}" 파일을 이 메일에 첨부해 주세요. (메일은 파일을 자동으로 붙일 수 없습니다)\n`;
-  setTimeout(() => {
-    location.href = `mailto:${CONFIG.CONTACT}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-  }, 400);   // 다운로드가 먼저 시작되도록 잠시 뒤에 메일 창을 연다
-}
 function allCache() {
   const out = [];
   for (let i = 0; i < localStorage.length; i++) {
@@ -1609,20 +1599,22 @@ function loadCacheList() {
   if (!items.length) { box.innerHTML = '<span class="mini">해당하는 항목이 없습니다.</span>'; return; }
   const byInd = new Map();
   items.forEach(x => { if (!byInd.has(x.industry)) byInd.set(x.industry, []); byInd.get(x.industry).push(x); });
-  box.innerHTML = `<p class="mini" style="margin:0 0 10px">공용 목록 <b>${nShared}</b>건 · 내 브라우저에만 있는 것 <b>${items.length - nShared}</b>건
-    &nbsp;<span style="color:#92400e">내 브라우저에만 있는 항목은 ${esc(CONFIG.ORG)}에 보내주셔야 다른 분들이 쓸 수 있습니다.</span></p>`
+  const nTemp = items.length - nShared;
+  box.innerHTML = `<p class="mini" style="margin:0 0 10px">공용 목록 <b>${nShared}</b>건`
+    + (nTemp ? ` · 임시 보관본 <b>${nTemp}</b>건
+    &nbsp;<span style="color:#92400e">임시 보관본은 서버에 등록되지 않아 나에게만 보입니다. 같은 업종·직종으로 다시 생성하면 공용으로 등록됩니다.</span>` : '')
+    + `</p>`
    + [...byInd].map(([ind, list]) => `
     <details ${term ? 'open' : ''} style="margin-bottom:6px">
       <summary style="font-weight:600;color:#1e3a8a;cursor:pointer;padding:8px 4px;border-bottom:1px solid #ddd">${esc(ind)} (${list.length})</summary>
       <div style="display:flex;flex-direction:column;gap:8px;padding:8px 0 12px 18px">
         ${list.map(x => `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px;border:1px solid #e5e7eb;border-radius:6px">
           <span><b>${esc(x.jobType)}</b>
-            <span class="chip ${x.shared ? 'ok' : 'warn'}" style="padding:2px 8px;font-size:.72rem;margin-left:6px">${x.shared ? '공용' : '내 브라우저'}</span>
+            <span class="chip ${x.shared ? 'ok' : 'warn'}" style="padding:2px 8px;font-size:.72rem;margin-left:6px">${x.shared ? '공용' : '임시'}</span>
             ${x.shared && !x.local ? '<span class="mini"> · 미다운로드</span>' : ''}</span>
           <span style="display:flex;gap:6px;flex-shrink:0">
             <button class="btn cache-apply" data-i="${esc(x.industry)}" data-j="${esc(x.jobType)}" style="background:#dcfce7;color:#166534;padding:4px 10px;font-size:.85rem">화면에 적용</button>
             <button class="btn cache-html" data-i="${esc(x.industry)}" data-j="${esc(x.jobType)}" style="background:#e0e7ff;color:#3730a3;padding:4px 10px;font-size:.85rem">HTML 생성</button>
-            ${x.local && !x.shared ? `<button class="btn cache-share" data-i="${esc(x.industry)}" data-j="${esc(x.jobType)}" style="background:#fef3c7;color:#92400e;padding:4px 10px;font-size:.85rem">등록 요청</button>` : ''}
             ${x.local ? `<button class="btn cache-del" data-i="${esc(x.industry)}" data-j="${esc(x.jobType)}" style="background:#ef4444;color:#fff;padding:4px 10px;font-size:.85rem">삭제</button>` : ''}
           </span></div>`).join('')}
       </div></details>`).join('');
@@ -1647,17 +1639,9 @@ $('cache-accordion-container').addEventListener('click', async e => {
     hide('cacheListModal'); render(); notify('화면에 적용했습니다.');
   } else if (b.classList.contains('cache-html')) {
     exportHtml(d); hide('cacheListModal'); notify('맞춤형 HTML을 생성했습니다.');
-  } else if (b.classList.contains('cache-share')) {
-    sendContribution(d, true);
   } else if (b.classList.contains('cache-del')) {
     if (confirm(`'${d.industry} / ${d.jobType}' 보관본을 삭제할까요?`)) { localStorage.removeItem(cacheKey(ind, job)); loadCacheList(); }
   }
-});
-$('export-cache-btn').addEventListener('click', () => {
-  const mine = allCache().filter(x => !findShared(x.industry, x.jobType)).map(({ key, ...r }) => r);
-  if (!mine.length) { notify('공용 목록에 없는 항목이 없습니다.', 'info'); return; }
-  download(new Blob([JSON.stringify(mine)], { type: 'application/json' }), `contrib-${mine.length}-${stamp()}.json`);
-  notify(`${mine.length}건을 파일로 저장했습니다. ${CONFIG.ORG}에 보내주세요.`);
 });
 
 /* ---------- 11. 맞춤형 HTML 내보내기 (치환 1회) ---------- */
