@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>공용 체크포인트 관리 — 산업안전보건교육원 교수실</title>
+<style>
+*{box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Malgun Gothic",sans-serif;background:#f3f4f6;margin:0;padding:24px;color:#111827;line-height:1.6}
+.wrap{max-width:980px;margin:0 auto}
+h1{font-size:1.6rem;color:#1e3a8a;margin:0 0 4px}
+.sub{color:#6b7280;font-size:.9rem;margin:0 0 22px}
+.card{background:#fff;border-radius:12px;padding:20px 22px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.card h2{font-size:1.05rem;margin:0 0 4px;color:#1e3a8a;display:flex;align-items:center;gap:8px}
+.card h2 i{background:#4f46e5;color:#fff;width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;font-style:normal;flex-shrink:0}
+.card p.hint{color:#6b7280;font-size:.85rem;margin:0 0 14px;padding-left:32px}
+.drop{border:2px dashed #c7d2fe;border-radius:10px;padding:30px 20px;text-align:center;color:#4b5563;cursor:pointer;background:#fafbff}
+.drop.over{background:#eef2ff;border-color:#4f46e5}
+.drop b{color:#4f46e5}
+table{width:100%;border-collapse:collapse;margin-top:14px;font-size:.88rem}
+th,td{border-bottom:1px solid #e5e7eb;padding:8px 10px;text-align:left}
+th{background:#f9fafb;font-weight:600;color:#374151}
+td.c,th.c{text-align:center}
+.tag{padding:2px 9px;border-radius:999px;font-size:.75rem;font-weight:700}
+.tag.new,.tag.auto{background:#dcfce7;color:#166534}
+.tag.upd{background:#fef3c7;color:#92400e}
+.tag.same,.tag.seed{background:#f3f4f6;color:#6b7280}
+.btn{border:0;border-radius:8px;padding:10px 18px;font-size:.92rem;font-weight:600;cursor:pointer;background:#4f46e5;color:#fff}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.sec{background:#e5e7eb;color:#374151}
+.btn.danger{background:#ef4444;color:#fff}
+.btn.sm{padding:4px 10px;font-size:.8rem}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:14px}
+input[type=text],input[type=password]{padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:.9rem;width:100%}
+label{display:block;font-size:.85rem;font-weight:600;margin:10px 0 4px;color:#374151}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.log{background:#0f172a;color:#cbd5e1;border-radius:8px;padding:12px;font-family:ui-monospace,Menlo,monospace;font-size:.8rem;max-height:260px;overflow:auto;margin-top:14px;white-space:pre-wrap;line-height:1.7}
+.log b{color:#4ade80}.log s{color:#f87171;text-decoration:none}.log u{color:#fbbf24;text-decoration:none}
+.warn{background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px 14px;font-size:.85rem;color:#92400e;margin-top:12px}
+.okbox{background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;border-radius:8px;padding:12px 14px;font-size:.88rem;margin-top:12px}
+code{background:#f3f4f6;padding:1px 6px;border-radius:4px;font-size:.85em}
+.stat{display:flex;gap:22px;flex-wrap:wrap;margin-top:6px}
+.stat div{font-size:.85rem}.stat b{display:block;font-size:1.5rem;color:#1e3a8a;line-height:1.2}
+.hide{display:none !important}
+.modepill{display:inline-block;padding:3px 12px;border-radius:999px;font-size:.8rem;font-weight:700}
+.modepill.srv{background:#dcfce7;color:#166534}
+.modepill.stat2{background:#e0e7ff;color:#3730a3}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>공용 체크포인트 관리</h1>
+  <p class="sub">산업안전보건교육원 교수실 전용 · 접속자에게 링크를 안내하지 마세요</p>
+
+  <!-- 0. 연결 -->
+  <div class="card">
+    <h2><i>0</i>연결 설정</h2>
+    <p class="hint">공용 서버(Apps Script) 주소를 넣으면 서버를 직접 관리합니다. 비워 두면 접수 파일을 GitHub에 올리는 방식으로 동작합니다.</p>
+    <div class="grid2">
+      <div><label for="api">공용 서버 주소 (Apps Script /exec)</label><input type="text" id="api" placeholder="https://script.google.com/macros/s/…/exec"></div>
+      <div><label for="atoken">관리자 토큰 (ADMIN_TOKEN)</label><input type="password" id="atoken" placeholder="스크립트 속성에 넣은 값"></div>
+    </div>
+    <div class="row">
+      <button class="btn" id="connect">연결 확인</button>
+      <button class="btn sec" id="forget-all">저장된 설정 지우기</button>
+      <span id="mode"></span>
+    </div>
+  </div>
+
+  <!-- 1. 현황 -->
+  <div class="card">
+    <h2><i>1</i>현재 공용 목록</h2>
+    <p class="hint" id="src-note">모든 접속자가 쓰고 있는 자료입니다.</p>
+    <div class="stat">
+      <div><b id="stat-n">–</b>등록 직종</div>
+      <div><b id="stat-ind">–</b>업종</div>
+      <div><b id="stat-upd">–</b>마지막 갱신</div>
+      <div><b id="stat-today">–</b>오늘 신규 생성</div>
+    </div>
+    <div class="row">
+      <button class="btn sec" id="reload">새로고침</button>
+      <button class="btn sec srv-only" id="import-seed">정적 자료(data/) 서버로 이관</button>
+      <button class="btn sec srv-only" id="backup">서버 전체 백업 내려받기</button>
+    </div>
+  </div>
+
+  <!-- 2. 접수 (정적 모드) -->
+  <div class="card static-only">
+    <h2><i>2</i>접수된 파일 올리기</h2>
+    <p class="hint">교육생이 메일로 보내온 <code>cp-xxxxxxxx.json</code> 파일을 끌어다 놓으세요. 여러 개를 한 번에 올려도 됩니다.</p>
+    <div class="drop" id="drop">📥 여기에 파일을 끌어다 놓거나 <b>클릭해서 선택</b></div>
+    <input type="file" id="file" accept=".json" multiple hidden>
+    <div id="result"></div>
+  </div>
+
+  <!-- 3. 반영 (정적 모드) -->
+  <div class="card static-only">
+    <h2><i>3</i>공용 목록에 반영</h2>
+    <p class="hint">A안은 버튼 한 번으로 GitHub에 커밋됩니다(1~2분 뒤 전원 적용). B안은 파일을 내려받아 직접 올리는 방법입니다.</p>
+    <details open>
+      <summary style="cursor:pointer;font-weight:700;color:#1e3a8a;margin-bottom:10px">A안 — GitHub에 바로 반영</summary>
+      <div class="grid2">
+        <div><label for="owner">GitHub 계정/조직</label><input type="text" id="owner" placeholder="예: kosha-edu"></div>
+        <div><label for="repo">저장소 이름</label><input type="text" id="repo" placeholder="예: ergonomic-checkpoints"></div>
+        <div><label for="branch">브랜치</label><input type="text" id="branch" value="main"></div>
+        <div><label for="token">액세스 토큰</label><input type="password" id="token" placeholder="github_pat_..."></div>
+      </div>
+      <div class="warn"><b>토큰은 이 브라우저에만 저장되며 배포 파일에는 포함되지 않습니다.</b><br>
+        GitHub → Settings → Developer settings → <b>Fine-grained personal access token</b>에서 이 저장소 하나만 선택하고 <b>Contents: Read and write</b> 권한만 주세요.</div>
+      <div class="row"><button class="btn" id="publish" disabled>GitHub에 반영하기</button></div>
+    </details>
+    <details style="margin-top:16px">
+      <summary style="cursor:pointer;font-weight:700;color:#1e3a8a">B안 — 토큰 없이 수동 업로드</summary>
+      <p class="hint" style="padding-left:0;margin-top:10px">받은 파일을 GitHub 저장소 <code>data/</code> 폴더에서 Add file → Upload files로 올리고 Commit 하세요.</p>
+      <div class="row"><button class="btn sec" id="dl-files" disabled>변경 파일 내려받기</button></div>
+    </details>
+  </div>
+
+  <!-- 4. 목록 관리 -->
+  <div class="card">
+    <h2><i>4</i>등록된 직종 관리</h2>
+    <p class="hint" id="mgr-note">품질에 문제가 있는 항목을 제외합니다.</p>
+    <input type="text" id="filter" placeholder="🔍 업종 또는 직종 검색">
+    <div id="list"></div>
+  </div>
+
+  <div class="log" id="log" hidden></div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+const nrm = s => (s||'').normalize('NFC').trim().toLowerCase().replace(/[\s()\[\]{}·・,.\/\\\-_]+/g,'');
+const catKey = (i,j) => nrm(i)+'::'+nrm(j);
+function slug(i,j){                       // 앱·서버와 동일한 FNV-1a
+  const t = catKey(i,j); let h = 0x811c9dc5;
+  for(let n=0;n<t.length;n++){ const c=t.charCodeAt(n);
+    h ^= (c<256 ? (c&255) : ((c&255)^(c>>8))); h = Math.imul(h,0x01000193)>>>0; }
+  return 'cp-'+h.toString(16).padStart(8,'0');
+}
+const today = () => new Date().toISOString().slice(0,10);
+const DATA_DIR = 'data';
+const CFG = 'ergAdminCfg';
+
+let SRV = false;                                   // 서버 모드 여부
+let catalog = { version:4, updated:today(), items:[] };
+let pending = new Map(), removed = new Set();
+
+function log(html){ $('log').hidden=false; $('log').insertAdjacentHTML('beforeend', html+'\n'); $('log').scrollTop=1e9; }
+function cfg(){ try{ return JSON.parse(localStorage.getItem(CFG)||'{}'); }catch(e){ return {}; } }
+function saveCfg(){
+  const c={}; ['api','atoken','owner','repo','branch','token'].forEach(k=>c[k]=$(k).value.trim());
+  localStorage.setItem(CFG, JSON.stringify(c));
+}
+(function restore(){ const c=cfg(); ['api','atoken','owner','repo','branch','token'].forEach(k=>{ if(c[k]) $(k).value=c[k]; }); })();
+['api','atoken','owner','repo','branch','token'].forEach(k=>$(k).addEventListener('change',saveCfg));
+$('forget-all').addEventListener('click',()=>{ localStorage.removeItem(CFG);
+  ['api','atoken','token'].forEach(k=>$(k).value=''); log('<u>ⓘ</u> 저장된 설정을 지웠습니다.'); boot(); });
+
+/*──────── 서버 통신 ────────*/
+async function post(body){
+  const r = await fetch($('api').value.trim(), { method:'POST',
+    headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(body), redirect:'follow' });
+  if(!r.ok) throw new Error('서버 응답 '+r.status);
+  return r.json();
+}
+const adm = (op, extra={}) => post({ action:'admin', token:$('atoken').value.trim(), op, ...extra });
+
+/*──────── 부팅 ────────*/
+async function boot(){
+  const url = $('api').value.trim();
+  SRV = false;
+  if(url){
+    try{
+      const p = await (await fetch(url+'?action=ping', {redirect:'follow'})).json();
+      if(p && p.ok){
+        SRV = true;
+        catalog = { version:4, updated:p.updated, items:[] };
+        $('mode').innerHTML = `<span class="modepill srv">서버 모드</span>
+          <span style="font-size:.85rem;color:#6b7280;margin-left:8px">${p.keyReady?'Gemini 키 설정됨':'⚠ 서버에 GEMINI_KEY 없음'} · 오늘 ${p.today}/${p.limit}건</span>`;
+        $('stat-today').textContent = p.today;
+        const l = await adm('list');
+        if(l.ok){ catalog.items = l.items; }
+        else { log('<s>✖</s> 관리자 인증 실패 — ADMIN_TOKEN 을 확인하세요. (목록 조회만 제한됩니다)');
+               const c = await (await fetch(url+'?action=catalog',{redirect:'follow'})).json();
+               if(c.ok) catalog.items = c.items; }
+      }
+    }catch(e){ log('<s>✖</s> 서버에 연결하지 못했습니다: '+esc(e.message)); }
+  }
+  if(!SRV){
+    $('mode').innerHTML = '<span class="modepill stat2">정적 모드</span> <span style="font-size:.85rem;color:#6b7280;margin-left:8px">GitHub의 data/ 폴더를 직접 관리</span>';
+    $('stat-today').textContent = '–';
+    try{
+      const r = await fetch(`${DATA_DIR}/catalog.json?t=`+Date.now());
+      if(r.ok){ const j=await r.json(); if(Array.isArray(j.items)) catalog=j; }
+    }catch(e){}
+  }
+  document.querySelectorAll('.srv-only').forEach(el=>el.classList.toggle('hide', !SRV));
+  document.querySelectorAll('.static-only').forEach(el=>el.classList.toggle('hide', SRV));
+  $('src-note').textContent = SRV ? '구글 드라이브에 저장되어 모든 접속자가 실시간으로 쓰고 있는 자료입니다.'
+                                  : 'GitHub Pages에 배포되어 모든 접속자가 쓰고 있는 자료입니다.';
+  $('mgr-note').innerHTML = SRV ? '제외를 누르면 <b>즉시 서버에서 삭제</b>되어 접속자에게 바로 반영됩니다.'
+                                : '제외 후 3번에서 반영해야 실제로 적용됩니다.';
+  renderStats(); renderList(); refreshButtons();
+}
+$('connect').addEventListener('click', ()=>{ saveCfg(); boot(); });
+$('reload').addEventListener('click', boot);
+
+function renderStats(){
+  $('stat-n').textContent = catalog.items.length;
+  $('stat-ind').textContent = new Set(catalog.items.map(x=>x.i)).size;
+  $('stat-upd').textContent = catalog.updated || '–';
+}
+function renderList(){
+  const q = nrm($('filter').value);
+  const items = catalog.items.filter(x => !q || x.k.includes(q));
+  $('list').innerHTML = !items.length ? '<p class="hint" style="padding:14px 0 0">항목이 없습니다.</p>' :
+    `<table><thead><tr><th>업종</th><th>직종</th><th class="c">출처</th><th class="c">등록일</th><th class="c">관리</th></tr></thead><tbody>${
+      items.map(x=>`<tr${removed.has(x.k)?' style="opacity:.4;text-decoration:line-through"':''}>
+        <td>${esc(x.i)}</td><td><b>${esc(x.j)}</b></td>
+        <td class="c"><span class="tag ${x.s==='seed'?'seed':'auto'}">${x.s==='seed'?'기본':(x.s==='auto'?'자동':'접수')}</span></td>
+        <td class="c">${esc(x.d||'-')}</td>
+        <td class="c">${removed.has(x.k)
+          ? `<button class="btn sec sm" data-undo="${esc(x.k)}">되돌리기</button>`
+          : `<button class="btn danger sm" data-rm="${esc(x.k)}">제외</button>`}</td></tr>`).join('')}</tbody></table>`;
+}
+$('filter').addEventListener('input', renderList);
+$('list').addEventListener('click', async e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  if(b.dataset.rm){
+    if(SRV){
+      const ent = catalog.items.find(x=>x.k===b.dataset.rm);
+      if(!confirm(`'${ent.i} / ${ent.j}' 를 서버에서 삭제합니다. 접속자에게 즉시 반영됩니다.\n계속할까요?`)) return;
+      b.disabled=true; b.textContent='삭제 중…';
+      try{ const r = await adm('delete',{keys:[b.dataset.rm]});
+        if(!r.ok) throw new Error(r.error);
+        log(`<b>✔</b> ${esc(ent.i)} / ${esc(ent.j)} 삭제 완료`); await boot();
+      }catch(err){ log('<s>✖</s> 삭제 실패: '+esc(err.message)); b.disabled=false; b.textContent='제외'; }
+      return;
+    }
+    removed.add(b.dataset.rm);
+  }
+  if(b.dataset.undo) removed.delete(b.dataset.undo);
+  renderList(); refreshButtons();
+});
+
+/*──────── 서버 전용 기능 ────────*/
+$('import-seed').addEventListener('click', async ()=>{
+  try{
+    const c = await (await fetch(`${DATA_DIR}/catalog.json`)).json();
+    log(`<u>▶</u> 정적 자료 ${c.items.length}건 읽는 중…`);
+    const recs = [];
+    for(const it of c.items){ recs.push(await (await fetch(`${DATA_DIR}/${it.f}.json`)).json()); }
+    const r = await adm('import',{records:recs});
+    if(!r.ok) throw new Error(r.error);
+    log(`<b>✔</b> ${r.imported}건 이관 완료 (서버 총 ${r.total}건)`);
+    await boot();
+  }catch(e){ log('<s>✖</s> 이관 실패: '+esc(e.message)); }
+});
+$('backup').addEventListener('click', async ()=>{
+  try{
+    log('<u>▶</u> 서버 전체 백업을 만드는 중…');
+    const r = await adm('export');
+    if(!r.ok) throw new Error(r.error);
+    dl(new Blob([JSON.stringify(r.records)],{type:'application/json'}), `backup-${r.records.length}-${today()}.json`);
+    log(`<b>✔</b> ${r.records.length}건 백업 저장`);
+  }catch(e){ log('<s>✖</s> 백업 실패: '+esc(e.message)); }
+});
+function dl(blob,name){ const a=document.createElement('a'),u=URL.createObjectURL(blob);
+  a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(u); }
+
+/*──────── 정적 모드: 접수 ────────*/
+const drop=$('drop'), fileInput=$('file');
+drop.addEventListener('click',()=>fileInput.click());
+drop.addEventListener('dragover',e=>{e.preventDefault();drop.classList.add('over');});
+drop.addEventListener('dragleave',()=>drop.classList.remove('over'));
+drop.addEventListener('drop',e=>{e.preventDefault();drop.classList.remove('over');handle(e.dataTransfer.files);});
+fileInput.addEventListener('change',e=>handle(e.target.files));
+
+function validate(rec){
+  if(!rec || typeof rec!=='object') return '형식 오류';
+  if(!rec.industry || !rec.jobType) return '업종/직종 없음';
+  if(!rec.expert || typeof rec.expert!=='object') return '전문가 데이터 없음';
+  const ids=Object.keys(rec.expert).map(Number);
+  if(ids.length!==132) return `전문가 문항이 ${ids.length}개 (132개여야 함)`;
+  for(const id of ids){ const e=rec.expert[id]; if(!e||!e.t||!Array.isArray(e.i)) return `id ${id} 내용 손상`; }
+  if(!Array.isArray(rec.managerIds)||!rec.managerIds.length) return '관리자 목록 없음';
+  if(!Array.isArray(rec.workerIds)||!rec.workerIds.length) return '작업자 목록 없음';
+  const miss=[...rec.managerIds,...rec.workerIds].filter(id=>!rec.expert[id]);
+  if(miss.length) return `전문가 데이터에 없는 번호 ${miss.length}개 참조`;
+  return null;
+}
+async function handle(files){
+  for(const f of files){
+    let parsed;
+    try{ parsed = JSON.parse(await f.text()); }
+    catch(e){ log(`<s>✖</s> ${esc(f.name)} — JSON 파싱 실패`); continue; }
+    for(const rec of (Array.isArray(parsed)?parsed:[parsed])){
+      const err = validate(rec);
+      if(err){ log(`<s>✖</s> ${esc(f.name)} — ${err}`); continue; }
+      const k = catKey(rec.industry, rec.jobType);
+      const exists = catalog.items.find(x=>x.k===k);
+      const sl = (exists&&exists.f) || slug(rec.industry, rec.jobType);
+      pending.set(sl, { rec, k, state: exists ? 'upd' : 'new' });
+      log(`<b>✔</b> ${esc(rec.industry)} / ${esc(rec.jobType)} — ${exists?'<u>기존 갱신</u>':'신규'} (${sl}.json)`);
+    }
+  }
+  renderPending(); refreshButtons();
+}
+function renderPending(){
+  if(!pending.size){ $('result').innerHTML=''; return; }
+  $('result').innerHTML = `<table><thead><tr><th>업종</th><th>직종</th><th class="c">구분</th><th class="c">문항</th><th class="c">저장 파일</th><th class="c"></th></tr></thead><tbody>${
+    [...pending].map(([sl,p])=>`<tr><td>${esc(p.rec.industry)}</td><td><b>${esc(p.rec.jobType)}</b></td>
+      <td class="c"><span class="tag ${p.state}">${p.state==='new'?'신규':'갱신'}</span></td>
+      <td class="c">132 / ${p.rec.managerIds.length} / ${p.rec.workerIds.length}</td>
+      <td class="c"><code>${esc(sl)}.json</code></td>
+      <td class="c"><button class="btn sec sm" data-drop="${esc(sl)}">취소</button></td></tr>`).join('')}</tbody></table>`;
+}
+$('result').addEventListener('click',e=>{
+  const b=e.target.closest('[data-drop]'); if(!b) return;
+  pending.delete(b.dataset.drop); renderPending(); refreshButtons();
+});
+
+function buildCatalog(){
+  const items = catalog.items.filter(x=>!removed.has(x.k));
+  for(const [sl,p] of pending){
+    const i = items.findIndex(x=>x.k===p.k);
+    const entry = { i:p.rec.industry, j:p.rec.jobType, f:sl, k:p.k, d:today(), s:'contrib' };
+    if(i>=0) items[i]=entry; else items.push(entry);
+  }
+  items.sort((a,b)=>(a.i+a.j).localeCompare(b.i+b.j));
+  return { version:4, updated:today(), items };
+}
+function changedFiles(){
+  const out = [{ path:`${DATA_DIR}/catalog.json`, content: JSON.stringify(buildCatalog()) }];
+  for(const [sl,p] of pending)
+    out.push({ path:`${DATA_DIR}/${sl}.json`, content: JSON.stringify({ ...p.rec, source:'contrib', created:today() }) });
+  return out;
+}
+function refreshButtons(){
+  const has = !SRV && (pending.size>0 || removed.size>0);
+  $('publish').disabled = !has; $('dl-files').disabled = !has;
+}
+$('dl-files').addEventListener('click', ()=>{
+  const files = changedFiles();
+  files.forEach(f => dl(new Blob([f.content],{type:'application/json'}), f.path.split('/').pop()));
+  log(`<b>✔</b> ${files.length}개 파일을 내려받았습니다. GitHub의 <code>${DATA_DIR}/</code> 폴더에 업로드하세요.`);
+});
+
+/*──────── 정적 모드: GitHub 반영 ────────*/
+const b64 = str => btoa(String.fromCharCode(...new TextEncoder().encode(str)));
+async function gh(p, opt={}){
+  const c = cfg();
+  return fetch(`https://api.github.com/repos/${$('owner').value.trim()}/${$('repo').value.trim()}/${p}`, {
+    ...opt, headers:{ Authorization:'Bearer '+$('token').value.trim(), Accept:'application/vnd.github+json',
+                      'X-GitHub-Api-Version':'2022-11-28', ...(opt.headers||{}) }});
+}
+$('publish').addEventListener('click', async ()=>{
+  const owner=$('owner').value.trim(), repo=$('repo').value.trim(), branch=$('branch').value.trim()||'main';
+  if(!owner||!repo||!$('token').value.trim()){ alert('계정·저장소·토큰을 모두 입력해 주세요.'); return; }
+  const files=changedFiles();
+  if(!confirm(`${files.length}개 파일을 ${owner}/${repo} (${branch}) 에 반영합니다.\n계속할까요?`)) return;
+  $('publish').disabled=true;
+  log(`\n<u>▶</u> ${owner}/${repo} 반영 시작 — 파일 ${files.length}개`);
+  try{
+    const chk = await gh(''); if(!chk.ok) throw new Error(`저장소 접근 실패 (${chk.status})`);
+    let done=0;
+    for(const f of files){
+      let sha; const cur = await gh(`contents/${f.path}?ref=${encodeURIComponent(branch)}`);
+      if(cur.ok) sha=(await cur.json()).sha;
+      const put = await gh(`contents/${f.path}`, { method:'PUT', body: JSON.stringify({
+        message:`체크포인트 공용자료 갱신: ${f.path.split('/').pop()}`, content:b64(f.content), branch, ...(sha?{sha}:{}) })});
+      if(!put.ok) throw new Error(`${f.path} 업로드 실패 (${put.status}) ${(await put.text()).slice(0,140)}`);
+      log(`<b>✔</b> ${esc(f.path)} ${sha?'갱신':'생성'} (${++done}/${files.length})`);
+    }
+    for(const k of removed){
+      const ent = catalog.items.find(x=>x.k===k); if(!ent||!ent.f) continue;
+      const p=`${DATA_DIR}/${ent.f}.json`;
+      const cur = await gh(`contents/${p}?ref=${encodeURIComponent(branch)}`); if(!cur.ok) continue;
+      const del = await gh(`contents/${p}`,{ method:'DELETE', body: JSON.stringify({
+        message:`체크포인트 공용자료 제외: ${ent.i}/${ent.j}`, sha:(await cur.json()).sha, branch })});
+      log(del.ok ? `<b>✔</b> ${esc(p)} 삭제` : `<s>✖</s> ${esc(p)} 삭제 실패 (${del.status})`);
+    }
+    log(`\n<b>✅ 반영 완료.</b> GitHub Pages 재배포에 보통 1~2분 걸립니다.`);
+    pending.clear(); removed.clear(); renderPending(); await boot();
+  }catch(err){ log(`<s>✖ 중단: ${esc(err.message)}</s>`); alert('반영 중 오류:\n'+err.message); }
+  finally{ refreshButtons(); }
+});
+
+boot();
+</script>
+</body>
+</html>
