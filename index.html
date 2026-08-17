@@ -473,9 +473,7 @@ details.adv summary{cursor:pointer;font-size:.88rem;color:#4b5563;font-weight:60
         <button data-view="expert" class="active">전문가용 132</button>
         <button data-view="manager">관리자용 <span id="seg-m">54</span></button>
         <button data-view="worker">작업자용 <span id="seg-w">20</span></button>
-      </div>
-      <span class="chip" id="count-chip">0 / 132</span>
-      <div class="bar"><i id="count-bar"></i></div>
+      </div>      
     </div>
 
     <div id="category-buttons"></div>
@@ -996,9 +994,7 @@ function render() {
 
 function updateCount() {
   const ids = currentIds();
-  const done = ids.filter(id => S.checked.has(id)).length;
-  document.getElementById('count-chip').textContent = `${done} / ${ids.length}`;
-  document.getElementById('count-bar').style.width = (ids.length ? done / ids.length * 100 : 0) + '%';
+  const done = ids.filter(id => S.checked.has(id)).length;  
   document.getElementById('seg-m').textContent = S.managerIds.length;
   document.getElementById('seg-w').textContent = S.workerIds.length;
   document.querySelectorAll('.m-n').forEach(e => e.textContent = S.managerIds.length);
