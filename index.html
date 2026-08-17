@@ -467,13 +467,13 @@ details.adv summary{cursor:pointer;font-size:.88rem;color:#4b5563;font-weight:60
       </div>
     </div>
 
-    <div class="toolbar no-print">
-      <input type="search" id="search-input" placeholder="🔍 체크포인트 검색 (예: 통로, 소음, 조명)">
+    <div class="toolbar no-print"  style="display: flex; justify-content: flex-end;background-color: #FFF0E5; padding: 3px 5px;">
       <div class="seg" id="view-seg">
         <button data-view="expert" class="active">전문가용 132</button>
         <button data-view="manager">관리자용 <span id="seg-m">54</span></button>
         <button data-view="worker">작업자용 <span id="seg-w">20</span></button>
-      </div>      
+      </div>
+      <input type="search" id="search-input" placeholder="🔍 체크포인트 검색 (예: 통로, 소음, 조명)" style="width: 320px; max-width:320px;">
     </div>
 
     <div id="category-buttons"></div>
@@ -592,7 +592,7 @@ details.adv summary{cursor:pointer;font-size:.88rem;color:#4b5563;font-weight:60
   <div class="modal-header"><h3>기 생성된 체크포인트 목록</h3><button id="closeCacheListModal" class="modal-close">&times;</button></div>
   <div class="modal-body" style="max-height:70vh;display:flex;flex-direction:column">
     <div class="form-group" style="padding-bottom:12px;border-bottom:1px solid #eee;margin-bottom:10px">
-      <input type="text" id="cache-search-input" placeholder="🔍 업종 또는 직종 검색…" style="width:100%;box-sizing:border-box;font-size:14px">
+      <input type="text" id="cache-search-input" placeholder="🔍 업종 또는 직종 검색…" style="width:100%;box-sizing:border-box;font-size:14px; padding: 8px 12px;">
     </div>
     <div id="cache-accordion-container" style="overflow-y:auto;flex-grow:1"></div>
   </div>
@@ -994,7 +994,7 @@ function render() {
 
 function updateCount() {
   const ids = currentIds();
-  const done = ids.filter(id => S.checked.has(id)).length;  
+  const done = ids.filter(id => S.checked.has(id)).length;
   document.getElementById('seg-m').textContent = S.managerIds.length;
   document.getElementById('seg-w').textContent = S.workerIds.length;
   document.querySelectorAll('.m-n').forEach(e => e.textContent = S.managerIds.length);
