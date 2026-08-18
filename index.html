@@ -627,6 +627,7 @@ details.adv summary{cursor:pointer;font-size:.88rem;color:#4b5563;font-weight:60
       <div class="kv"><label style="width:130px">작업자용 문항 수</label><input type="range" id="opt-wtot" min="10" max="40" value="20"><b id="opt-wtot-v">20</b></div>
       <div class="kv"><label style="width:130px">직종 특화 강도</label><input type="range" id="opt-beta" min="0" max="150" value="60"><b id="opt-beta-v">0.60</b></div>
       <div class="kv"><label><input type="checkbox" id="opt-norewrite"> 문항 재작성 없이 선별만 (0초, 오프라인)</label></div>
+      <div class="kv"><label><input type="checkbox" id="opt-force"> 기존 공용 자료를 무시하고 <b>다시 생성</b> <span class="mini">(원문 그대로 등록된 자료를 고칠 때)</span></label></div>
       <div class="kv"><label><input type="checkbox" id="opt-aiselect" checked> <b>업종·직종별 우선순위를 AI가 판단</b>해 관리자용·작업자용 항목 선정 <span class="mini">(번호만 주고받음 · 문장 변형 없음 · 재작성과 병렬 처리)</span></label></div>
     </details>
   </div>
@@ -683,7 +684,7 @@ const CONFIG = {
   /* 공용 서버(Google Apps Script) 주소.
      넣으면  → 신규 직종이 자동으로 서버에 등록되어 다음 사람이 즉시 사용. API 키도 서버에 보관.
      비우면  → 아래 data/ 폴더만 읽는 읽기 전용 방식으로 동작. */
-  API_URL: 'https://script.google.com/macros/s/AKfycbxHWO52UnJhrZc8uTcscbJlllyFreCJOx-VxeFco4WHymR31YwpfVrdOB4ZOUltxVKuTQ/exec',
+  API_URL: 'https://script.google.com/macros/s/AKfycbxntz6767gRHB_HTO30BOb8cmH-WsJdGU6B_aoT0mQTtCxpHNjGcyRqbFiAN3zHZPjaug/exec',                            // 예: 'https://script.google.com/macros/s/AKfy…/exec'
   DATA_DIR: 'data',                       // 서버가 없거나 응답하지 않을 때 쓰는 예비 자료
   ORG: '산업안전보건교육원'
 };
@@ -1227,13 +1228,25 @@ async function callGemini(payload, tries = 3) {
 
 /** 범주 1개(13~27문항)만 재작성 → 응답이 작아 빠르고 실패 시 그 범주만 재시도 */
 async function rewriteCategory(group, industry, jobType) {
-  const sys = `당신은 산업안전·인간공학 전문가입니다. 주어진 체크포인트를 "${industry} / ${jobType}" 현장에 맞는 구체적 표현으로 다시 씁니다.
-규칙:
+  const sys = `당신은 산업안전·인간공학 전문가입니다.
+아래 체크포인트를 "${industry} / ${jobType}" 현장에서 그대로 쓸 수 있는 문장으로 다시 씁니다.
+
+■ 반드시 지킬 것
+- 모든 문항을 빠짐없이 다시 쓰십시오. 원문을 그대로 복사해 돌려주는 것은 실패로 간주합니다.
+- 각 문항에 이 업종·직종의 실제 대상을 넣으십시오.
+  예) 취급물(자재·부품·식재료), 설비·공구, 작업장소, 작업자세, 그 직종이 실제로 하는 동작.
+  "물건", "작업대" 같은 일반어 대신 그 현장에서 부르는 이름을 쓰십시오.
+- ideas(구체적인 사항)도 모두 그 현장의 조치로 바꾸십시오. 원문 예시를 그대로 두지 마십시오.
+
+■ 바꾸지 말 것
 - id는 절대 변경하지 말고 입력과 같은 개수, 같은 id로 반환합니다.
-- 원문의 안전보건 취지를 그대로 유지하고 새 항목을 만들지 않습니다.
+- 원문의 안전보건 취지를 유지하고 새 항목을 만들지 않습니다.
 - ideas 배열의 항목 수도 입력과 동일하게 유지합니다.
+
+■ 문장 형식
 - 영어 단어를 쓰지 않고 순수 한국어로 작성합니다.
-- 각 문장은 150자를 넘지 않습니다.`;
+- 각 문장은 150자를 넘지 않습니다.
+- 현장 점검표에 쓰는 문장이므로 "~한다", "~하도록 한다" 형태로 끝맺습니다.`;
   const input = group.checkpoints.map(c => ({ id: c.id, text: c.text, ideas: c.ideas }));
   const out = await callGemini({
     contents: [{ parts: [{ text: `범주: ${group.category}\n\n${JSON.stringify(input, null, 0)}` }] }],
@@ -1595,13 +1608,13 @@ $('applyAiConfigBtn').addEventListener('click', async () => {
   try {
     /* ⓪ 공용 자료 우선 — 이미 누군가 만들어 둔 직종이면 AI를 부르지 않는다 */
     const key = cacheKey(industry, jobType);
-    const local = readCache(key);
+    const local = $('opt-force').checked ? null : readCache(key);
     if (local) {
       glog('<b>✔</b> 내 브라우저 보관본에서 즉시 복원');
       finish(local.expert, local.managerIds, local.workerIds, industry, jobType, t0, '보관본', local.selection);
       return;
     }
-    const shared = findShared(industry, jobType);
+    const shared = $('opt-force').checked ? null : findShared(industry, jobType);
     if (shared) {
       glog(`<b>✔</b> 공용 자료 발견 — 내려받는 중 (${esc(shared.i)} / ${esc(shared.j)})`);
       const rec = await fetchShared(shared);
@@ -1636,11 +1649,14 @@ $('applyAiConfigBtn').addEventListener('click', async () => {
       }, 500);
       try {
         const r = await api({ action: 'generate', industry, jobType, managerIds, workerIds,
-                              aiSelect: $('opt-aiselect').checked });
+                              aiSelect: $('opt-aiselect').checked, force: $('opt-force').checked });
         clearInterval(tick);
-        if (!r || !r.ok) throw new Error(r && r.error || '서버 생성 실패');
+        if (!r || !r.ok) throw new Error((r && r.error) || '서버 생성 실패');
         $('progress-bar-main').style.width = '100%';
-        glog(`<b>✔</b> 생성 완료 — 재작성 ${r.rewritten || 132}/132`);
+        const chg = (r.changed === undefined) ? r.rewritten : r.changed;
+        if (r.cached) glog('<b>✔</b> 기존 공용 자료를 그대로 사용했습니다 (AI 호출 없음)');
+        else if (chg >= 132) glog(`<b>✔</b> 생성 완료 — 132문항 모두 현장 표현으로 재작성`);
+        else glog(`<s>⚠</s> 생성 완료 — 실제로 바뀐 문항 <b>${chg}</b>/132 (나머지는 원문 유지)`);
         if (r.selection && r.selection.by === 'ai') {                     // 서버가 판단한 우선순위
           if ((r.selection.focus || []).length) glog(`<b>✔</b> 중점 범주 — ${r.selection.focus.map(esc).join(' · ')}`);
           if (r.selection.reason) glog(`<span class="mini">${esc(r.selection.reason)}</span>`);
