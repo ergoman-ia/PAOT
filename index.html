@@ -683,7 +683,7 @@ const CONFIG = {
   /* 공용 서버(Google Apps Script) 주소.
      넣으면  → 신규 직종이 자동으로 서버에 등록되어 다음 사람이 즉시 사용. API 키도 서버에 보관.
      비우면  → 아래 data/ 폴더만 읽는 읽기 전용 방식으로 동작. */
-  API_URL: 'https://script.google.com/macros/s/AKfycbyHYYA_zNnRSjWPWmqe9KNQ-zRc8VNEJWbTO7wIojX1HHn3AttzRx3rGI3mb61YmAbrmg/exec',                            // 예: 'https://script.google.com/macros/s/AKfy…/exec'
+  API_URL: 'https://script.google.com/macros/s/AKfycbxHWO52UnJhrZc8uTcscbJlllyFreCJOx-VxeFco4WHymR31YwpfVrdOB4ZOUltxVKuTQ/exec'
   DATA_DIR: 'data',                       // 서버가 없거나 응답하지 않을 때 쓰는 예비 자료
   ORG: '산업안전보건교육원'
 };
@@ -1358,9 +1358,10 @@ function openAiModal() {
   if (!canRewrite) { $('opt-norewrite').checked = true; $('opt-norewrite').disabled = true;
     $('ai-error-message').textContent = '공용 서버와 API 키가 모두 없어 문항 재작성은 비활성화됩니다. 선별 기능은 정상 동작합니다.'; }
   else { $('opt-norewrite').disabled = false; }
-  /* 이 선별은 브라우저에서 직접 호출하므로 API 키가 있을 때만 쓸 수 있다 */
-  $('opt-aiselect').closest('.kv').style.display = AI_READY ? '' : 'none';
-  if (!AI_READY) $('opt-aiselect').checked = false;
+  /* 공용 서버가 있으면 서버가, 없으면 브라우저가 직접 수행한다 */
+  const canSelect = SERVER || AI_READY;
+  $('opt-aiselect').closest('.kv').style.display = canSelect ? '' : 'none';
+  if (!canSelect) $('opt-aiselect').checked = false;
   fillDatalists($('industry-input').value.trim()); syncJobField(); previewSelection();
   show('aiConfigModal');
 }
@@ -1597,7 +1598,7 @@ $('applyAiConfigBtn').addEventListener('click', async () => {
     const local = readCache(key);
     if (local) {
       glog('<b>✔</b> 내 브라우저 보관본에서 즉시 복원');
-      finish(local.expert, local.managerIds, local.workerIds, industry, jobType, t0, '보관본');
+      finish(local.expert, local.managerIds, local.workerIds, industry, jobType, t0, '보관본', local.selection);
       return;
     }
     const shared = findShared(industry, jobType);
@@ -1606,7 +1607,7 @@ $('applyAiConfigBtn').addEventListener('click', async () => {
       const rec = await fetchShared(shared);
       if (rec) {
         glog('<b>✔</b> 공용 자료 적용 완료 — AI 호출 0회');
-        finish(rec.expert, rec.managerIds, rec.workerIds, rec.industry, rec.jobType, t0, '공용');
+        finish(rec.expert, rec.managerIds, rec.workerIds, rec.industry, rec.jobType, t0, '공용', rec.selection);
         return;
       }
     }
@@ -1634,16 +1635,22 @@ $('applyAiConfigBtn').addEventListener('click', async () => {
         $('progress-label-main').textContent = `공용 서버에서 생성 중… ${s}초`;
       }, 500);
       try {
-        const r = await api({ action: 'generate', industry, jobType, managerIds, workerIds });
+        const r = await api({ action: 'generate', industry, jobType, managerIds, workerIds,
+                              aiSelect: $('opt-aiselect').checked });
         clearInterval(tick);
         if (!r || !r.ok) throw new Error(r && r.error || '서버 생성 실패');
         $('progress-bar-main').style.width = '100%';
         glog(`<b>✔</b> 생성 완료 — 재작성 ${r.rewritten || 132}/132`);
+        if (r.selection && r.selection.by === 'ai') {                     // 서버가 판단한 우선순위
+          if ((r.selection.focus || []).length) glog(`<b>✔</b> 중점 범주 — ${r.selection.focus.map(esc).join(' · ')}`);
+          if (r.selection.reason) glog(`<span class="mini">${esc(r.selection.reason)}</span>`);
+          showSelectionReason(r.selection);
+        }
         glog('<b>✔</b> 공용 목록에 자동 등록됨 — 다음 이용자부터 즉시 사용');
         saveCache(key, r);
         if (!findShared(industry, jobType))
           CATALOG.push({ i: r.industry, j: r.jobType, f: fileId(r.industry, r.jobType), k: catKey(r.industry, r.jobType), d: r.created, s: 'auto' });
-        finish(r.expert, r.managerIds, r.workerIds, r.industry, r.jobType, t0, r.cached ? '공용' : 'server');
+        finish(r.expert, r.managerIds, r.workerIds, r.industry, r.jobType, t0, r.cached ? '공용' : 'server', r.selection);
         return;
       } catch (e) {
         clearInterval(tick);
@@ -1692,7 +1699,7 @@ $('applyAiConfigBtn').addEventListener('click', async () => {
     glog(`<b>✔</b> 병합 완료 — 재작성 ${rewritten}/132, 원문 유지 ${132 - rewritten}`);
 
     saveIfShared(key, { industry, jobType, expert: flat, managerIds, workerIds, selection }, false);
-    finish(flat, managerIds, workerIds, industry, jobType, t0, false);
+    finish(flat, managerIds, workerIds, industry, jobType, t0, false, selection);
 
   } catch (err) {
     console.error(err);
@@ -1702,10 +1709,10 @@ $('applyAiConfigBtn').addEventListener('click', async () => {
   }
 });
 
-function finish(flat, managerIds, workerIds, industry, jobType, t0, fromCache) {
+function finish(flat, managerIds, workerIds, industry, jobType, t0, fromCache, selection) {
   const secs = ((performance.now() - t0) / 1000).toFixed(1);
-  const rec = { industry, jobType, expert: flat, managerIds, workerIds };
-  exportHtml(rec);
+  const rec = { industry, jobType, expert: flat, managerIds, workerIds, selection: selection || null };
+  exportHtml(rec);   // 선정 근거도 함께 담아 내보낸다
   /* 생성 결과를 현재 화면에도 즉시 반영 (내려받은 파일을 열지 않아도 바로 확인 가능) */
   S.industry = industry; S.jobType = jobType;
   loadExpert(flat); S.managerIds = managerIds; S.workerIds = workerIds;
