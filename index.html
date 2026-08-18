@@ -478,6 +478,7 @@ details.adv summary{cursor:pointer;font-size:.88rem;color:#4b5563;font-weight:60
   <header>
     <h1 id="app-title">인간공학 체크포인트(ILO)</h1>
     <p id="app-sub">작업장의 안전, 보건 및 작업조건 개선</p>
+    <p class="mini no-print" style="margin:2px 0 0;color:#9ca3af">판 <span id="build-stamp">-</span></p>
   </header>
 
   <nav id="category-nav">    
@@ -680,11 +681,14 @@ details.adv summary{cursor:pointer;font-size:.88rem;color:#4b5563;font-weight:60
 const PRISTINE_HTML = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
 
 /* ═══════════ 운영 설정 (교수실에서 이 부분만 수정하시면 됩니다) ═══════════ */
+/* 배포 판 구분용. 브라우저 캐시 때문에 옛 파일이 떠 있는지 바로 알 수 있다.
+   파일을 고칠 때마다 이 값을 올린다. */
+const BUILD = '2026-08-18 d';
 const CONFIG = {
   /* 공용 서버(Google Apps Script) 주소.
      넣으면  → 신규 직종이 자동으로 서버에 등록되어 다음 사람이 즉시 사용. API 키도 서버에 보관.
      비우면  → 아래 data/ 폴더만 읽는 읽기 전용 방식으로 동작. */
-  API_URL: 'https://script.google.com/macros/s/AKfycbzhJtDYBCJ6MwRZD3q83rWxySnc6vmOLVdnPAiX2aEDkrTvwEjq-Ks6Yve7dkXJcT9wqA/exec',                            // 예: 'https://script.google.com/macros/s/AKfy…/exec'
+  API_URL: 'https://script.google.com/macros/s/AKfycbyvzXDcB1Fx9XKC4XpnCGZfgrszmUWH2cFeBK1E4Gz4naLEASw0GhfS4cxHl-om16CuTg/exec',                            // 예: 'https://script.google.com/macros/s/AKfy…/exec'
   DATA_DIR: 'data',                       // 서버가 없거나 응답하지 않을 때 쓰는 예비 자료
   ORG: '산업안전보건교육원'
 };
@@ -1691,7 +1695,8 @@ $('applyAiConfigBtn').addEventListener('click', async () => {
     /* ②-A 공용 서버가 있으면 서버가 생성하고 그 자리에서 공용 목록에 등록한다.
            접속자는 아무것도 보낼 필요가 없고, API 키도 서버에만 있다. */
     if (SERVER && !SERVER_DOWN) {
-      glog('⚡ 공용 서버에 생성 요청 — 132문항을 나눠 동시 처리 (30~60초)');
+      glog(`⚡ 공용 서버에 생성 요청 — 132문항을 나눠 동시 처리 (30~60초) · 판 ${BUILD}`);
+      const tServer = performance.now();
       $('progress-label-main').textContent = '공용 서버에서 생성 중…';
       const tick = setInterval(() => {
         const s = ((performance.now() - t0) / 1000).toFixed(0);
@@ -1705,6 +1710,10 @@ $('applyAiConfigBtn').addEventListener('click', async () => {
         if (!r || !r.ok) throw new Error((r && r.error) || '서버 생성 실패');
         $('progress-bar-main').style.width = '100%';
         const chg = (r.changed === undefined) ? r.rewritten : r.changed;
+        if (r.elapsed) {                                   // 서버가 보고한 실제 소요 시간
+          const rd = (r.rounds || []).map(x => `${x.n}건/${x.model.replace('gemini-', '')} ${x.secs}초`).join(' → ');
+          glog(`<span class="mini">· 서버 생성 ${r.elapsed}초 · ${r.pieces || '?'}묶음${rd ? ' · ' + esc(rd) : ''}</span>`);
+        }
         if (r.cached) glog('<b>✔</b> 기존 공용 자료를 그대로 사용했습니다 (AI 호출 없음)');
         else if (chg >= 132) glog(`<b>✔</b> 생성 완료 — 132문항 모두 현장 표현으로 재작성`);
         else glog(`<s>⚠</s> 생성 완료 — 실제로 바뀐 문항 <b>${chg}</b>/132 (나머지는 원문 유지)`);
@@ -1728,6 +1737,7 @@ $('applyAiConfigBtn').addEventListener('click', async () => {
         } else {
           glog(`<s>✖</s> 서버 생성 실패 (${esc(e.message)}) → 이 브라우저에서 직접 생성합니다`);
         }
+        glog(`<span class="mini">· 서버 시도에 ${((performance.now() - tServer) / 1000).toFixed(1)}초 소요</span>`);
       }
     }
 
@@ -1754,9 +1764,10 @@ $('applyAiConfigBtn').addEventListener('click', async () => {
     const maxN = Math.max(...chunks.map(c => c.checkpoints.length));
     glog(`⚡ 132문항을 ${total}묶음(최대 ${maxN}문항)으로 나눠 동시 재작성 — ${modelNow()}`);
 
-    const attempt = g => rewriteCategory(g, industry, jobType)
-      .then(r => { bump(); return r; })
-      .catch(e => { bump(); glog(`<s>✖</s> ${esc(g.category)} 일부 — 실패(${esc(e.message)})`); return { category: g.category, map: new Map(), group: g, failed: true }; });
+    const tRewrite = performance.now();
+    const attempt = g => { const t = performance.now(); return rewriteCategory(g, industry, jobType)
+      .then(r => { bump(); r.secs = (performance.now() - t) / 1000; return r; })
+      .catch(e => { bump(); glog(`<s>✖</s> ${esc(g.category)} 일부 — 실패(${esc(e.message)})`); return { category: g.category, map: new Map(), group: g, failed: true }; }); };
 
     const selJob = $('opt-aiselect').checked
       ? aiRefineSelection(industry, jobType, opts.managerTotal, opts.workerTotal)
@@ -1784,6 +1795,13 @@ $('applyAiConfigBtn').addEventListener('click', async () => {
     results.forEach(r => { const p = perCat.get(r.category) || { n: 0, e: 0 };
                            p.n += r.map.size; p.e += (r.expected || r.map.size); perCat.set(r.category, p); });
     [...perCat].forEach(([c, p]) => glog(`<b>✔</b> ${esc(c)} — ${p.n}문항`));
+    /* 어느 묶음이 전체를 붙잡았는지 드러낸다 */
+    const times = results.filter(r => r.secs).map(r => r.secs);
+    if (times.length) {
+      const slow = results.filter(r => r.secs).sort((a, b) => b.secs - a.secs)[0];
+      glog(`<span class="mini">· 재작성 ${((performance.now() - tRewrite) / 1000).toFixed(1)}초 `
+         + `(가장 느린 묶음 ${esc(slow.category)} ${slow.secs.toFixed(1)}초 · 평균 ${(times.reduce((a, b) => a + b, 0) / times.length).toFixed(1)}초)</span>`);
+    }
     let selection = null;
     if (aiSel) {
       managerIds = aiSel.managerIds; workerIds = aiSel.workerIds;
@@ -2213,6 +2231,8 @@ function exportHtml(payload) {
 
 /* ---------- 12. 부팅 ---------- */
 (function boot() {
+  const bs = $('build-stamp'); if (bs) bs.textContent = BUILD;
+
   syncJobField(); fillDatalists('');           // 입력창 초기 안내 문구
 
   try { const s = localStorage.getItem(CHECK_KEY); if (s) JSON.parse(s).forEach(id => S.checked.add(id)); } catch (e) {}
