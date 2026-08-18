@@ -71,16 +71,23 @@
         nav {
             margin-bottom: 20px;
         }
+        /* 카테고리 라벨 + 보기 전환 + 검색을 한 컨테이너에 담고 가운데 정렬 */
         .category-nav-header {
             display: flex;
-            justify-content: space-between;
+            flex-wrap: wrap;
+            justify-content: center;
             align-items: center;
+            gap: 12px;
+            background-color: #FFF0E5;
+            padding: 8px 12px;
+            border-radius: 6px;
             margin-bottom: 15px;
         }
         .category-nav-header h2 {
             font-size: 1.25rem;
             font-weight: 600;
             margin: 0;
+            white-space: nowrap;
         }
         .action-menu {
             position: relative; /* Dropdown anchor */
@@ -103,7 +110,9 @@
         .dropdown-content {
             display: none; /* Hidden by default */
             position: absolute;
-            right: 0;
+            /* 기본: 버튼의 왼쪽 상단을 시작점으로 펼친다 */
+            left: 0;
+            right: auto;
             background-color: #ffffff;
             min-width: 280px;
             box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.15);
@@ -112,6 +121,11 @@
             border: 1px solid #e5e7eb;
             overflow: hidden;
             padding: 6px 0;
+        }
+        /* 버튼이 오른쪽에 있을 때: 메뉴 박스의 오른쪽 끝을 버튼 오른쪽 끝에 맞춘다 */
+        .dropdown-content.align-right {
+            left: auto;
+            right: 0;
         }
         .dropdown-content button {
             color: #374151;
@@ -408,7 +422,7 @@
         }
 /* ===== v2 추가 스타일 ===== */
 .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:12px 0 4px}
-.toolbar input[type=search]{flex:1;min-width:180px;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:.95rem}
+.toolbar input[type=search],.category-nav-header input[type=search]{flex:1;min-width:180px;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:.95rem}
 .chip{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:999px;background:#eef2ff;color:#3730a3;font-size:.85rem;font-weight:600}
 .chip.ok{background:#dcfce7;color:#166534}
 .chip.warn{background:#fef3c7;color:#92400e}
@@ -442,9 +456,7 @@ details.adv summary{cursor:pointer;font-size:.88rem;color:#4b5563;font-weight:60
     <p id="app-sub">작업장의 안전, 보건 및 작업조건 개선</p>
   </header>
 
-  <nav id="category-nav">
-    <div class="category-nav-header">
-      <h2>카테고리 바로가기</h2>
+  <nav id="category-nav">    
       <div class="action-menu">
         <button id="menu-toggle-btn" class="btn-menu" title="메뉴">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 8C13.1 8 14 7.1 14 6C14 4.9 13.1 4 12 4C10.9 4 10 4.9 10 6C10 7.1 10.9 8 12 8ZM12 10C10.9 10 10 10.9 10 12C10 13.1 10.9 14 12 14C13.1 14 14 13.1 14 12C14 10.9 13.1 10 12 10ZM12 16C10.9 16 10 16.9 10 18C10 19.1 10.9 20 12 20C13.1 20 14 19.1 14 18C14 16.9 13.1 16 12 16Z"/></svg>
@@ -465,15 +477,15 @@ details.adv summary{cursor:pointer;font-size:.88rem;color:#4b5563;font-weight:60
         </div>
         <input type="file" id="csv-file-input" accept=".csv" style="display:none">
       </div>
-    </div>
 
-    <div class="toolbar no-print"  style="display: flex; justify-content: flex-end;background-color: #FFF0E5; padding: 3px 5px;">
+    <div class="category-nav-header no-print">
+      <h2>카테고리 바로가기 &raquo;</h2>
       <div class="seg" id="view-seg">
         <button data-view="expert" class="active">전문가용 132</button>
         <button data-view="manager">관리자용 <span id="seg-m">54</span></button>
         <button data-view="worker">작업자용 <span id="seg-w">20</span></button>
       </div>
-      <input type="search" id="search-input" placeholder="🔍 체크포인트 검색 (예: 통로, 소음, 조명)" style="width: 320px; max-width:320px;">
+      <input type="search" id="search-input" placeholder="🔍 체크포인트 검색 (예: 통로, 소음, 조명)" style="flex:0 1 320px;width:320px;max-width:320px">
     </div>
 
     <div id="category-buttons"></div>
@@ -1042,7 +1054,23 @@ document.querySelectorAll('.modal').forEach(m => m.addEventListener('click', e =
 ].forEach(([b, m]) => { const el = document.getElementById(b); if (el) el.addEventListener('click', () => hide(m)); });
 
 const menuBtn = document.getElementById('menu-toggle-btn'), dd = document.getElementById('action-dropdown');
-menuBtn.addEventListener('click', e => { e.stopPropagation(); dd.classList.toggle('show'); });
+/* 버튼이 화면 왼쪽에 있으면 왼쪽 상단을 시작점으로, 오른쪽에 있으면 오른쪽 끝에 맞춰 펼친다.
+   마크업에서 메뉴 위치를 옮겨도 CSS를 고칠 필요가 없다. */
+function alignDropdown() {
+  const host = menuBtn.closest('.container') || document.documentElement;
+  const b = menuBtn.getBoundingClientRect(), h = host.getBoundingClientRect();
+  const w = dd.offsetWidth || 280;
+  const onRightHalf = (b.left + b.width / 2) > (h.left + h.width / 2);
+  const overflowsRight = (b.left + w) > (h.right - 4);   // 왼쪽 기준으로 펴면 넘치는 경우
+  dd.classList.toggle('align-right', onRightHalf || overflowsRight);
+}
+menuBtn.addEventListener('click', e => {
+  e.stopPropagation();
+  if (dd.classList.contains('show')) { dd.classList.remove('show'); return; }
+  dd.classList.add('show');
+  alignDropdown();                       // 그려지기 전에 위치를 확정 — 깜빡임 없음
+});
+window.addEventListener('resize', () => { if (dd.classList.contains('show')) alignDropdown(); });
 window.addEventListener('click', e => { if (!menuBtn.contains(e.target) && !dd.contains(e.target)) dd.classList.remove('show'); });
 const menu = (id, fn) => { const el = document.getElementById(id); if (el) el.addEventListener('click', () => { dd.classList.remove('show'); fn(); }); };
 menu('manual-btn', () => show('manualModal'));
