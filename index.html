@@ -563,7 +563,7 @@ details.adv summary{cursor:pointer;font-size:.88rem;color:#4b5563;font-weight:60
     <ul style="list-style:disc;padding-left:20px">
       <li style="margin-bottom:8px"><b>저장/불러오기</b> — 조치여부 상태를 CSV로 백업·복원합니다.</li>
       <li style="margin-bottom:8px"><b>체크포인트(인쇄용) 생성</b> — 작업자용·관리자용·전문가용 보고서를 즉시 만들어 인쇄합니다.</li>
-      <li style="margin-bottom:8px" class="ai-only"><b>맞춤 업종·직종별 체크포인트 생성</b> — 업종·직종을 넣으면 132개 문항이 그 현장 용어로 재작성된 전용 HTML 파일이 내려받아집니다. 범주 9개를 동시에 처리하므로 보통 20~40초면 끝납니다.</li>
+      <li style="margin-bottom:8px" class="ai-only"><b>맞춤 업종·직종별 체크포인트 생성</b> — 업종·직종을 넣으면 132개 문항이 그 현장 용어로 재작성된 전용 HTML 파일이 내려받아집니다. 132문항을 작은 묶음으로 나눠 동시에 처리하므로 보통 30~60초, 늦어도 100초 안에 끝납니다.</li>
     </ul>
     <h4 style="margin-top:18px;color:#1e3a8a">3. 관리자용·작업자용은 어떻게 뽑히나요?</h4>
     <p class="mini">기존 20개 직종의 검증된 선별 결과를 통계로 학습한 <b>내장 우선순위표</b>와 업종·직종 키워드 가중치로 계산합니다. AI 호출 없이 즉시 계산되며, 문장은 전문가용 132개에서 ID로 그대로 인용하므로 원문과 100% 일치합니다.</p>
@@ -575,7 +575,7 @@ details.adv summary{cursor:pointer;font-size:.88rem;color:#4b5563;font-weight:60
 <div id="aiConfigModal" class="modal"><div class="modal-content" style="max-width:640px">
   <div class="modal-header"><h3>맞춤 업종·직종별 체크포인트 생성</h3><button id="closeAiConfigModal" class="modal-close">&times;</button></div>
   <div class="modal-body">
-    <p class="mini" id="server-note">업종·직종을 입력하면 ① 관리자용·작업자용 선별은 <b>즉시(코드)</b>, ② 132개 문항 현장 맞춤 재작성은 <b>범주 9개 동시 호출</b>로 처리합니다.</p>
+    <p class="mini" id="server-note">업종·직종을 입력하면 ① 관리자용·작업자용 선별은 <b>즉시(코드)</b>, ② 132개 문항 현장 맞춤 재작성은 <b>작은 묶음 22개 동시 호출</b>로 처리합니다.</p>
     <div class="form-group">
       <label for="industry-input">업종 <span class="mini">(예: 건설업, 제조업, 화학제품제조업, 선박건조수리업)</span></label>
       <div class="combo" id="industry-combo">
@@ -684,7 +684,7 @@ const CONFIG = {
   /* 공용 서버(Google Apps Script) 주소.
      넣으면  → 신규 직종이 자동으로 서버에 등록되어 다음 사람이 즉시 사용. API 키도 서버에 보관.
      비우면  → 아래 data/ 폴더만 읽는 읽기 전용 방식으로 동작. */
-  API_URL: 'https://script.google.com/macros/s/AKfycbwCSaxWnJeuP55ymWAXpLeyTbTCqGa60GBNCUNolP4aQpc-EbyObbvYZtD0dCE0yZsI-A/exec',                            // 예: 'https://script.google.com/macros/s/AKfy…/exec'
+  API_URL: 'https://script.google.com/macros/s/AKfycbzhJtDYBCJ6MwRZD3q83rWxySnc6vmOLVdnPAiX2aEDkrTvwEjq-Ks6Yve7dkXJcT9wqA/exec',                            // 예: 'https://script.google.com/macros/s/AKfy…/exec'
   DATA_DIR: 'data',                       // 서버가 없거나 응답하지 않을 때 쓰는 예비 자료
   ORG: '산업안전보건교육원'
 };
@@ -1202,7 +1202,8 @@ const API_KEY = '__GEMINI_API_KEY__';
 const MODEL = 'gemini-3-flash-preview';
 const AI_READY = !/^__GEMINI/.test(API_KEY);
 
-const REWRITE_CONCURRENCY = 9;   // 9개 범주 동시 — 한도에 걸리면 기다리지 않고 아래 모델로 내려간다
+const CHUNK = 8;                  // 한 번에 재작성할 문항 수 — 응답이 짧을수록 전체가 빨리 끝난다
+const REWRITE_CONCURRENCY = 24;   // 나눈 묶음(현재 22개)을 모두 동시에 — 한도에 걸리면 아래 모델로 내려간다
 const REWRITE_SCHEMA = {
   type: 'ARRAY', items: { type: 'OBJECT', properties: {
     id: { type: 'NUMBER' }, text: { type: 'STRING' }, ideas: { type: 'ARRAY', items: { type: 'STRING' } }
@@ -1217,6 +1218,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
    한 번 내려가면 그 생성이 끝날 때까지 아래 모델을 쓴다(같은 벽에 9번 부딪히지 않도록). */
 const MODEL_CHAIN = ['gemini-3-flash-preview', 'gemini-2.5-flash', 'gemini-2.5-flash-lite'];
 let MODEL_IDX = 0;
+let SERVER_DOWN = false;   // 서버 키 문제를 확인하면 이 세션에서는 서버 호출을 건너뛴다
 const modelNow = () => MODEL_CHAIN[MODEL_IDX];
 function resetModelChain() { MODEL_IDX = 0; }
 function noteModelDrop(from, to, why) {
@@ -1416,7 +1418,7 @@ function openAiModal() {
   const canRewrite = SERVER || AI_READY;
   $('server-note').innerHTML = SERVER
     ? `<span class="chip ok">공용 서버 연결됨</span> <span class="mini">등록 ${SERVER.count}건 · 갱신 ${esc(SERVER.updated || '-')} · 신규 생성분은 자동으로 공용 목록에 등록됩니다.</span>`
-    : '업종·직종을 입력하면 ① 관리자용·작업자용 선별은 <b>즉시(코드)</b>, ② 132개 문항 재작성은 <b>범주 9개 동시 호출</b>로 처리합니다.';
+    : '업종·직종을 입력하면 ① 관리자용·작업자용 선별은 <b>즉시(코드)</b>, ② 132개 문항 재작성은 <b>작은 묶음 22개 동시 호출</b>로 처리합니다.';
   if (!canRewrite) { $('opt-norewrite').checked = true; $('opt-norewrite').disabled = true;
     $('ai-error-message').textContent = '공용 서버와 API 키가 모두 없어 문항 재작성은 비활성화됩니다. 선별 기능은 정상 동작합니다.'; }
   else { $('opt-norewrite').disabled = false; }
@@ -1586,8 +1588,8 @@ function updateSharedStatus(ind, job) {
   }
   const sug = suggestShared(ind, job);
   const howto = SERVER
-    ? '공용 자료에 없어 새로 생성합니다 (약 20~40초). 생성되면 <b>공용 목록에 자동 등록</b>되어 다음 이용자부터 바로 쓰입니다.'
-    : '공용 자료에 없어 새로 생성합니다 (약 20~40초). 공용 서버에 연결되어 있지 않아 <b>이 브라우저에서만</b> 쓰이는 임시본이 됩니다.';
+    ? '공용 자료에 없어 새로 생성합니다 (보통 30~60초, 최대 100초). 생성되면 <b>공용 목록에 자동 등록</b>되어 다음 이용자부터 바로 쓰입니다.'
+    : '공용 자료에 없어 새로 생성합니다 (보통 30~60초, 최대 100초). 공용 서버에 연결되어 있지 않아 <b>이 브라우저에서만</b> 쓰이는 임시본이 됩니다.';
   box.innerHTML = `<span class="chip warn">🆕 신규 직종</span> <span class="mini">${howto}</span>`
     + (sug.length ? `<div class="pill-list">${sug.map(x =>
         `<button class="pill sug-btn" data-i="${esc(x.i)}" data-j="${esc(x.j)}" style="border:1px solid #c7d2fe;cursor:pointer">↩ ${esc(x.i)} / ${esc(x.j)}</button>`).join('')}
@@ -1688,8 +1690,8 @@ $('applyAiConfigBtn').addEventListener('click', async () => {
 
     /* ②-A 공용 서버가 있으면 서버가 생성하고 그 자리에서 공용 목록에 등록한다.
            접속자는 아무것도 보낼 필요가 없고, API 키도 서버에만 있다. */
-    if (SERVER) {
-      glog('⚡ 공용 서버에 생성 요청 — 범주 9개 동시 처리 (20~40초)');
+    if (SERVER && !SERVER_DOWN) {
+      glog('⚡ 공용 서버에 생성 요청 — 132문항을 나눠 동시 처리 (30~60초)');
       $('progress-label-main').textContent = '공용 서버에서 생성 중…';
       const tick = setInterval(() => {
         const s = ((performance.now() - t0) / 1000).toFixed(0);
@@ -1719,7 +1721,13 @@ $('applyAiConfigBtn').addEventListener('click', async () => {
         return;
       } catch (e) {
         clearInterval(tick);
-        glog(`<s>✖</s> 서버 생성 실패 (${esc(e.message)}) → 이 브라우저에서 직접 생성합니다`);
+        /* 서버 키 문제라면 이 세션에서는 다시 시도하지 않는다 — 매번 수십 초를 버리게 된다 */
+        if (/API 키가 거부|API key not valid/i.test(e.message)) {
+          SERVER_DOWN = true;
+          glog('<s>✖</s> 공용 서버의 API 키가 무효입니다 → 이번 세션에서는 브라우저에서 직접 생성합니다');
+        } else {
+          glog(`<s>✖</s> 서버 생성 실패 (${esc(e.message)}) → 이 브라우저에서 직접 생성합니다`);
+        }
       }
     }
 
@@ -1730,18 +1738,25 @@ $('applyAiConfigBtn').addEventListener('click', async () => {
       return;
     }
 
-    /* ② 재작성 — 범주 9개 동시 + (선택) AI 선별 확인도 같은 라인에서 병렬 */
+    /* ② 재작성 — 전체 소요는 “가장 오래 걸리는 한 건”이 정한다.
+       범주별 문항 수가 9~27개로 들쭉날쭉해서 작업조직(27문항) 하나가 전체를 붙잡고 있었다.
+       그래서 범주를 CHUNK 문항 이하 덩어리로 쪼개 모두 동시에 보낸다. */
+    const chunks = [];
+    BASE.forEach(g => {
+      for (let i = 0; i < g.checkpoints.length; i += CHUNK)
+        chunks.push({ category: g.category, checkpoints: g.checkpoints.slice(i, i + CHUNK) });
+    });
     let done = 0;
-    const total = BASE.length;
+    const total = chunks.length;
     const bump = () => { $('progress-bar-main').style.width = Math.round(++done / total * 100) + '%';
-                         $('progress-label-main').textContent = `문항 재작성 ${done}/${total} 범주 완료`; };
+                         $('progress-label-main').textContent = `문항 재작성 ${done}/${total} 묶음 완료`; };
     resetModelChain();
-    glog(`⚡ ${total}개 범주 동시 재작성 시작 (132문항 · ${modelNow()})`);
+    const maxN = Math.max(...chunks.map(c => c.checkpoints.length));
+    glog(`⚡ 132문항을 ${total}묶음(최대 ${maxN}문항)으로 나눠 동시 재작성 — ${modelNow()}`);
 
-    /* 9개를 한꺼번에 던지면 분당 한도(429)에 걸린다. 몇 개씩 나눠 보내고, 실패한 범주는 한 번 더 시도한다. */
     const attempt = g => rewriteCategory(g, industry, jobType)
-      .then(r => { bump(); glog(`<b>✔</b> ${r.category} — ${r.map.size}/${r.expected}문항`); return r; })
-      .catch(e => { bump(); glog(`<s>✖</s> ${g.category} — 실패(${esc(e.message)})`); return { category: g.category, map: new Map(), group: g, failed: true }; });
+      .then(r => { bump(); return r; })
+      .catch(e => { bump(); glog(`<s>✖</s> ${esc(g.category)} 일부 — 실패(${esc(e.message)})`); return { category: g.category, map: new Map(), group: g, failed: true }; });
 
     const selJob = $('opt-aiselect').checked
       ? aiRefineSelection(industry, jobType, opts.managerTotal, opts.workerTotal)
@@ -1750,20 +1765,25 @@ $('applyAiConfigBtn').addEventListener('click', async () => {
       : Promise.resolve(null);
 
     let [results, aiSel] = await Promise.all([
-      runLimited(BASE.map(g => () => attempt(g)), REWRITE_CONCURRENCY),
+      runLimited(chunks.map(g => () => attempt(g)), REWRITE_CONCURRENCY),
       selJob
     ]);
 
-    /* 남은 실패분 재시도 — 한도 초과였다면 잠시 쉰 뒤엔 대개 통과한다 */
+    /* 남은 실패분 재시도 — 한도 초과였다면 아래 모델로 내려간 뒤라 대개 통과한다 */
     const failed = results.filter(r => r.failed);
     if (failed.length) {
-      glog(`⏳ 실패한 ${failed.length}개 범주를 ${modelNow()}(으)로 다시 시도합니다`);
+      glog(`⏳ 실패한 ${failed.length}묶음을 ${modelNow()}(으)로 다시 시도합니다`);
       await sleep(1200);
       done = Math.max(0, done - failed.length);
       const again = await runLimited(failed.map(r => () => attempt(r.group)), 2);
       results = results.map(r => r.failed ? (again.shift() || r) : r);
     }
-    results.filter(r => r.failed).forEach(r => glog(`<s>✖</s> ${esc(r.category)} — 재시도도 실패 → 원문 유지`));
+    results.filter(r => r.failed).forEach(r => glog(`<s>✖</s> ${esc(r.category)} 일부 — 재시도도 실패 → 원문 유지`));
+    /* 범주 단위로 결과를 합쳐 로그를 정리한다 */
+    const perCat = new Map();
+    results.forEach(r => { const p = perCat.get(r.category) || { n: 0, e: 0 };
+                           p.n += r.map.size; p.e += (r.expected || r.map.size); perCat.set(r.category, p); });
+    [...perCat].forEach(([c, p]) => glog(`<b>✔</b> ${esc(c)} — ${p.n}문항`));
     let selection = null;
     if (aiSel) {
       managerIds = aiSel.managerIds; workerIds = aiSel.workerIds;
