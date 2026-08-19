@@ -165,7 +165,7 @@ $('wipekeys').addEventListener('click',()=>{
 });
 
 $('logout').addEventListener('click',()=>{
-  if(!confirm('관리자 모드에서 로그아웃합니다.\n입력창의 서버 주소와 토큰을 지우고, 이 브라우저에 남아 있을 수 있는 저장값도 함께 삭제합니다.\n계속할까요?')) return;
+  if(!confirm('관리자 모드에서 로그아웃합니다.')) return;
   purgeStoredSecrets();
   ['api','atoken'].forEach(k=>$(k).value='');
   SRV=false; catalog={version:4,updated:'–',items:[]};
@@ -263,7 +263,7 @@ $('list').addEventListener('click', async e=>{
   const b=e.target.closest('button'); if(!b || !b.dataset.rm) return;
   if(!SRV){ log('<s>✖</s> 서버에 연결되어 있지 않습니다.'); return; }
   const ent = catalog.items.find(x=>x.k===b.dataset.rm); if(!ent) return;
-  if(!confirm(`'${ent.i} / ${ent.j}' 를 서버에서 삭제합니다. 접속자에게 즉시 반영됩니다.\n계속할까요?`)) return;
+  if(!confirm(`'${ent.i} / ${ent.j}' 를 서버에서 삭제합니다. 접속자에게 즉시 반영됩니다.`)) return;
   b.disabled=true; b.textContent='삭제 중…';
   try{ const r = await adm('delete',{keys:[b.dataset.rm]});
     if(!r.ok) throw new Error(r.error);
