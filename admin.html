@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>공용 체크포인트 관리</title>
+<title>공용 체크포인트 관리 — 산업안전보건교육원 교수실</title>
 <style>
 *{box-sizing:border-box}
 body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Malgun Gothic",sans-serif;background:#f3f4f6;margin:0;padding:24px;color:#111827;line-height:1.6}
@@ -173,21 +173,59 @@ $('logout').addEventListener('click',()=>{
 });
 
 /*──────── 서버 통신 ────────*/
+/* 주소 정규화 — 붙여넣기 실수로 인한 오류를 미리 막는다.
+   특히 "https://" 를 빠뜨리면 브라우저가 상대경로로 해석해 이 사이트의 HTML 페이지를
+   받아오고, 그 결과 JSON 파싱이 "Unexpected token '<'" 로 실패한다. */
+function apiUrl(){
+  let u = $('api').value.trim();
+  if(!u) return '';
+  u = u.replace(/[?#].*$/, '').replace(/\s+/g,'');       // 쿼리·앵커·공백 제거
+  if(!/^https?:\/\//i.test(u)) u = 'https://' + u.replace(/^\/+/, '');
+  u = u.replace(/\/+$/,'');                              // 끝 슬래시 제거
+  return u;
+}
+/** 응답이 정말 JSON인지 확인하고, 아니면 원인을 알려준다 */
+async function asJson(res, where){
+  const text = await res.text();
+  const head = text.slice(0, 200).trim();
+  if(/^\s*</.test(head)){                                // JSON 이 아니라 HTML 이 왔다
+    let why;
+    if(/accounts\.google\.com|로그인|Sign in|Google 계정/i.test(text))
+      why = '구글 로그인 페이지가 돌아왔습니다 — 웹앱 배포의 「액세스 권한이 있는 사용자」를 <b>모든 사용자</b>로 바꿔 주세요.';
+    else if(res.status === 404 || /페이지를 찾을 수 없|not found|찾을 수 없습니다/i.test(text))
+      why = '해당 주소에 배포된 웹앱이 없습니다 — Apps Script의 「배포 관리」에서 현재 활성 배포의 /exec 주소를 다시 복사해 주세요.';
+    else if(!/script\.google(usercontent)?\.com/.test(res.url || ''))
+      why = '입력한 주소가 이 사이트 안의 페이지로 해석되었습니다 — 주소가 <b>https://script.google.com/macros/s/…/exec</b> 형식인지 확인해 주세요.';
+    else
+      why = '서버가 JSON 대신 오류 페이지를 보냈습니다 — 잠시 뒤 다시 시도하거나 배포 상태를 확인해 주세요.';
+    throw new Error(`${where} 응답이 올바르지 않습니다 (HTTP ${res.status}). ${why}`);
+  }
+  try { return JSON.parse(text); }
+  catch(e){ throw new Error(`${where} 응답을 해석할 수 없습니다: ${head.slice(0,80)}`); }
+}
+async function getJson(path, where){
+  const base = apiUrl();
+  if(!base) throw new Error('서버 주소가 비어 있습니다.');
+  const res = await fetch(base + path, { redirect:'follow' });
+  return asJson(res, where);
+}
 async function post(body){
-  const r = await fetch($('api').value.trim(), { method:'POST',
+  const base = apiUrl();
+  if(!base) throw new Error('서버 주소가 비어 있습니다.');
+  const res = await fetch(base, { method:'POST',
     headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(body), redirect:'follow' });
-  if(!r.ok) throw new Error('서버 응답 '+r.status);
-  return r.json();
+  return asJson(res, '서버');
 }
 const adm = (op, extra={}) => post({ action:'admin', token:$('atoken').value.trim(), op, ...extra });
 
 /*──────── 부팅 ────────*/
 async function boot(){
-  const url = $('api').value.trim();
+  const url = apiUrl();
+  if(url && url !== $('api').value.trim()) $('api').value = url;   // 정규화 결과를 입력창에 반영
   SRV = false;
   if(url){
     try{
-      const p = await (await fetch(url+'?action=ping', {redirect:'follow'})).json();
+      const p = await getJson('?action=ping', '서버');
       if(p && p.ok){
         SRV = true;
         catalog = { version:4, updated:p.updated, items:[] };
@@ -197,10 +235,14 @@ async function boot(){
         const l = await adm('list');
         if(l.ok){ catalog.items = l.items; }
         else { log('<s>✖</s> 관리자 인증 실패 — ADMIN_TOKEN 을 확인하세요. (목록 조회만 제한됩니다)');
-               const c = await (await fetch(url+'?action=catalog',{redirect:'follow'})).json();
+               const c = await getJson('?action=catalog', '카탈로그');
                if(c.ok) catalog.items = c.items; }
+      } else {
+        log('<s>✖</s> 서버가 오류를 반환했습니다: '+esc((p && p.error) || '알 수 없음'));
       }
-    }catch(e){ log('<s>✖</s> 서버에 연결하지 못했습니다: '+esc(e.message)); }
+    }catch(e){ log('<s>✖</s> 서버에 연결하지 못했습니다 — '+e.message); }
+  } else {
+    log('<s>✖</s> 서버 주소를 입력한 뒤 「연결 확인」을 눌러 주세요.');
   }
   if(!SRV){
     $('mode').innerHTML = '<span class="modepill stat2">연결 안 됨</span> <span style="font-size:.85rem;color:#6b7280;margin-left:8px">서버 주소를 확인하세요</span>';
@@ -323,10 +365,9 @@ $('backup').addEventListener('click', async ()=>{
   const btn=$('backup'); btn.disabled=true; const label=btn.textContent; btn.textContent='백업 만드는 중…';
   try{
     log('<u>▶</u> 서버 전체 백업을 만드는 중…');
-    const url=$('api').value.trim();
     const [r, cat] = await Promise.all([
       adm('export'),
-      (await fetch(url+'?action=catalog',{redirect:'follow'})).json()
+      getJson('?action=catalog', '카탈로그')
     ]);
     if(!r.ok)   throw new Error(r.error);
     if(!cat.ok) throw new Error('카탈로그를 읽지 못했습니다');
