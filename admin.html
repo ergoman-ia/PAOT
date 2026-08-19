@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>공용 체크포인트 관리 — 산업안전보건교육원 교수실</title>
+<title>공용 체크포인트 관리</title>
 <style>
 *{box-sizing:border-box}
 body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Malgun Gothic",sans-serif;background:#f3f4f6;margin:0;padding:24px;color:#111827;line-height:1.6}
@@ -51,13 +51,15 @@ code{background:#f3f4f6;padding:1px 6px;border-radius:4px;font-size:.85em}
   <!-- 0. 연결 -->
   <div class="card">
     <h2><i>0</i>연결 설정</h2>
-    <p class="hint">공용 서버(Apps Script) 주소를 넣으면 서버를 직접 관리합니다. 비워 두면 접수 파일을 GitHub에 올리는 방식으로 동작합니다.</p>
+    <p class="hint">공용 서버(Apps Script) 주소를 넣으면 서버를 직접 관리합니다. 비워 두면 접수 파일을 GitHub에 올리는 방식으로 동작합니다.<br>
+      <b>주소와 토큰은 이 브라우저 어디에도 저장되지 않습니다.</b> 화면을 닫거나 새로고침하면 사라지므로 매번 다시 입력해야 합니다 — 공용 PC 보호를 위한 의도된 동작입니다.</p>
     <div class="grid2">
-      <div><label for="api">공용 서버 주소 (Apps Script /exec)</label><input type="text" id="api" placeholder="https://script.google.com/macros/s/…/exec"></div>
-      <div><label for="atoken">관리자 토큰 (ADMIN_TOKEN)</label><input type="password" id="atoken" placeholder="스크립트 속성에 넣은 값"></div>
+      <div><label for="api">공용 서버 주소 (Apps Script /exec)</label><input type="text" id="api" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off" name="erg-api-url-nofill"></div>
+      <div><label for="atoken">관리자 토큰 (ADMIN_TOKEN)</label><input type="password" id="atoken" placeholder="스크립트 속성에 넣은 값" autocomplete="new-password" name="erg-admin-token-nofill"></div>
     </div>
     <div class="row">
       <button class="btn" id="connect">연결 확인</button>
+      <button class="btn sec" id="wipekeys" title="예전 버전이 이 브라우저(localStorage/sessionStorage)에 남겼을 수 있는 서버 주소·토큰을 찾아 삭제합니다">🧹 저장 키 삭제</button>
       <button class="btn danger" id="logout">🔓 로그아웃</button>
       <span id="mode"></span>
     </div>
@@ -110,23 +112,61 @@ function slug(i,j){                       // 앱·서버와 동일한 FNV-1a
 /* 서버가 Asia/Seoul 기준으로 날짜를 쓰므로 여기서도 같은 기준을 쓴다.
    UTC(toISOString)를 쓰면 새벽 0~9시에 하루가 어긋난다. */
 const today = () => new Intl.DateTimeFormat('sv-SE', { timeZone:'Asia/Seoul' }).format(new Date());
-const CFG = 'ergAdminCfg';
+/* ★★ 보안 — 서버 주소·관리자 토큰은 이 브라우저 어디에도 저장하지 않는다 ★★
+   공용 PC의 localStorage 에 남으면 누구든 개발자 도구로 꺼낼 수 있다.
+   · 값은 오직 입력창(메모리)에만 존재한다. 새로고침·창 닫기와 함께 사라진다.
+   · index.html 의 관리자 인증을 거쳐 넘어온 경우, sessionStorage 의 1회용 인계값
+     (ergAdminHandoff)을 읽는 "즉시" 지운다.
+   · 예전 버전이 남겨 둔 localStorage 의 ergAdminCfg(주소+토큰)도 발견 즉시 삭제한다. */
+const CFG = 'ergAdminCfg';                 // (구버전이 쓰던 저장 키 — 이제 청소 대상일 뿐)
+const HANDOFF = 'ergAdminHandoff';         // index.html → admin.html 1회용 인계 키
 
 let SRV = false;                                   // 서버 모드 여부
 let catalog = { version:4, updated:today(), items:[] };
 let QUOTA = null;   // 서버의 오늘 생성 호출 카운터
 
 function log(html){ $('log').hidden=false; $('log').insertAdjacentHTML('beforeend', html+'\n'); $('log').scrollTop=1e9; }
-function cfg(){ try{ return JSON.parse(localStorage.getItem(CFG)||'{}'); }catch(e){ return {}; } }
-function saveCfg(){
-  const c={}; ['api','atoken'].forEach(k=>c[k]=$(k).value.trim());
-  localStorage.setItem(CFG, JSON.stringify(c));
+
+/** 이 브라우저에 남아 있(을 수 있)는 서버 주소·토큰을 모두 삭제하고, 지운 내역을 돌려준다 */
+function purgeStoredSecrets(){
+  const removed = [];
+  [[localStorage,'localStorage'],[sessionStorage,'sessionStorage']].forEach(([st,label])=>{
+    [CFG,HANDOFF].forEach(k=>{
+      try{ if(st.getItem(k)!==null){ st.removeItem(k); removed.push(label+' → '+k); } }catch(e){}
+    });
+  });
+  return removed;
 }
-(function restore(){ const c=cfg(); ['api','atoken'].forEach(k=>{ if(c[k]) $(k).value=c[k]; }); })();
-['api','atoken'].forEach(k=>$(k).addEventListener('change',saveCfg));
+
+/* 첫 로드: ① 1회용 인계값이 있으면 입력창에 옮기고 그 즉시 지운다
+           ② 구버전이 남긴 저장값이 있으면 마지막으로 한 번 복원해 주고 곧바로 삭제한다
+              (관리자가 갑자기 접속이 끊긴 줄 알고 당황하지 않도록) */
+(function restoreOnce(){
+  let c = null;
+  try{
+    const raw = sessionStorage.getItem(HANDOFF);
+    if(raw){ sessionStorage.removeItem(HANDOFF); c = JSON.parse(raw); }   // 읽는 즉시 삭제
+  }catch(e){}
+  if(!c){
+    try{ const raw = localStorage.getItem(CFG); if(raw) c = JSON.parse(raw); }catch(e){}
+  }
+  const removed = purgeStoredSecrets();                                    // 어떤 경우든 저장소는 비운다
+  if(c){ if(c.api) $('api').value = String(c.api); if(c.atoken) $('atoken').value = String(c.atoken); }
+  if(removed.length)
+    log(`<u>ⓘ</u> 보안 청소 — 이 브라우저에 저장돼 있던 접속 정보 ${removed.length}건을 삭제했습니다 (${removed.map(esc).join(', ')}). 앞으로는 어디에도 저장되지 않습니다.`);
+})();
+
+/* 「저장 키 삭제」 — 언제든 눌러 이 브라우저의 잔존 접속 정보를 확인·삭제한다 */
+$('wipekeys').addEventListener('click',()=>{
+  const removed = purgeStoredSecrets();
+  log(removed.length
+    ? `<b>✔</b> 저장돼 있던 접속 정보 ${removed.length}건을 삭제했습니다 — ${removed.map(esc).join(', ')}`
+    : '<b>✔</b> 이 브라우저에 저장된 서버 주소·토큰이 없습니다. (지금 입력창의 값은 저장된 것이 아니라 화면을 닫으면 사라집니다)');
+});
+
 $('logout').addEventListener('click',()=>{
-  if(!confirm('관리자 모드에서 로그아웃합니다.\n이 브라우저에 저장된 서버 주소와 토큰이 지워집니다.\n계속할까요?')) return;
-  localStorage.removeItem(CFG);
+  if(!confirm('관리자 모드에서 로그아웃합니다.\n입력창의 서버 주소와 토큰을 지우고, 이 브라우저에 남아 있을 수 있는 저장값도 함께 삭제합니다.\n계속할까요?')) return;
+  purgeStoredSecrets();
   ['api','atoken'].forEach(k=>$(k).value='');
   SRV=false; catalog={version:4,updated:'–',items:[]};
   location.href='index.html';
@@ -174,7 +214,7 @@ async function boot(){
   $('mgr-note').innerHTML = '삭제를 누르면 <b>즉시 서버에서 삭제</b>되어 접속자에게 바로 반영됩니다.';
   renderStats(); renderList();
 }
-$('connect').addEventListener('click', ()=>{ saveCfg(); boot(); });
+$('connect').addEventListener('click', boot);   // ★ 더 이상 어떤 값도 저장하지 않는다
 $('reload').addEventListener('click', boot);
 
 function renderStats(){
