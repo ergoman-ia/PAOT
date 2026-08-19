@@ -294,13 +294,20 @@
             list-style-type: disc;
             margin-top: 5px;
         }
+        #aiConfigModal .modal-content {
+            /* ★ 모달이 화면 아래로 계속 길어지지 않게 뷰포트 안에 가둔다 */
+            max-height: 92vh;
+            display: flex;
+            flex-direction: column;
+        }
         #aiConfigModal .modal-body {
             display: flex;
             flex-direction: column;
             gap: 15px;
-            /* 드롭다운이 잘리지 않도록 본문은 스크롤하지 않는다 — 모달 전체가 스크롤된다 */
-            max-height: none;
-            overflow: visible;
+            /* 내용이 길어지면 본문만 내부 스크롤 — 업종·직종 선택 단계에서는 내용이 짧아
+               드롭다운이 잘릴 일이 없고, 생성 로그가 길어졌을 때만 스크롤이 생긴다 */
+            overflow-y: auto;
+            min-height: 0;
         }
         #aiConfigModal .form-group {
             display: flex;
@@ -605,10 +612,6 @@ details.adv summary{cursor:pointer;font-size:.88rem;color:#4b5563;font-weight:60
       <div class="mini" style="margin-bottom:4px">이 업종·직종에서 비중을 높인 범주</div>
       <div id="pv-focus" class="pill-list" style="margin-bottom:6px"></div>
       <div id="pv-reason" class="mini" style="color:#475569"></div>
-      <details id="pv-detail" style="margin-top:8px">
-        <summary class="mini" style="cursor:pointer;color:#64748b">범주별 배분 자세히 보기</summary>
-        <div class="cat-grid" id="pv-grid" style="margin-top:6px"></div>
-      </details>
     </div>
 
     <div id="ai-error-message" class="error-message"></div>
@@ -621,16 +624,6 @@ details.adv summary{cursor:pointer;font-size:.88rem;color:#4b5563;font-weight:60
       <div class="gen-log" id="gen-log"></div>
     </div>
     <p id="ai-loading-message" class="hide" style="margin-top:10px"></p>
-
-    <details class="adv">
-      <summary>고급 설정</summary>
-      <div class="kv"><label style="width:130px">관리자용 문항 수</label><input type="range" id="opt-mtot" min="30" max="80" value="54"><b id="opt-mtot-v">54</b></div>
-      <div class="kv"><label style="width:130px">작업자용 문항 수</label><input type="range" id="opt-wtot" min="10" max="40" value="20"><b id="opt-wtot-v">20</b></div>
-      <div class="kv"><label style="width:130px">직종 특화 강도</label><input type="range" id="opt-beta" min="0" max="150" value="60"><b id="opt-beta-v">0.60</b></div>
-      <div class="kv"><label><input type="checkbox" id="opt-norewrite"> 문항 재작성 없이 선별만 (0초, 오프라인)</label></div>
-      <div class="kv"><label><input type="checkbox" id="opt-force"> 기존 공용 자료를 무시하고 <b>다시 생성</b> <span class="mini">(원문 그대로 등록된 자료를 고칠 때)</span></label></div>
-      <div class="kv"><label><input type="checkbox" id="opt-aiselect" checked> <b>업종·직종별 우선순위를 AI가 판단</b>해 관리자용·작업자용 항목 선정 <span class="mini">(번호만 주고받음 · 문장 변형 없음 · 재작성과 병렬 처리)</span></label></div>
-    </details>
   </div>
   <div class="modal-footer">
     <button id="applyAiConfigBtn" class="btn btn-primary"><span class="btn-text">생성하기</span><div class="spinner" style="display:none"></div></button>
@@ -657,7 +650,7 @@ details.adv summary{cursor:pointer;font-size:.88rem;color:#4b5563;font-weight:60
   <div class="modal-header"><h3>관리자 모드</h3><button id="closeAdminGateModal" class="modal-close">&times;</button></div>
   <div class="modal-body">
     <p class="mini" style="margin:0 0 10px">스크립트 속성에 넣어 두신 <b>ADMIN_TOKEN</b> 을 입력하세요.</p>
-    <input type="password" id="admin-token-input" placeholder="관리자 토큰" autocomplete="current-password"
+    <input type="password" id="admin-token-input" placeholder="관리자 토큰" autocomplete="off" name="erg-admin-token"
            style="width:100%;box-sizing:border-box;padding:10px;font-size:14px;border:1px solid #cbd5e1;border-radius:6px">
     <div id="admin-gate-msg" class="mini" style="margin-top:8px;min-height:18px"></div>
   </div>
@@ -688,7 +681,7 @@ const CONFIG = {
   /* 공용 서버(Google Apps Script) 주소.
      넣으면  → 신규 직종이 자동으로 서버에 등록되어 다음 사람이 즉시 사용. API 키도 서버에 보관.
      비우면  → 아래 data/ 폴더만 읽는 읽기 전용 방식으로 동작. */
-  API_URL: 'https://script.google.com/macros/s/AKfycbyp1dOEI5rFlQzfrTgFAN6IhEQPWzin0GihMcxhcZ3-JG_lG4R3i7-eAVSWh2BpnC0U-Q/exec',                            // 예: 'https://script.google.com/macros/s/AKfy…/exec'
+  API_URL: 'https://script.google.com/macros/s/AKfycbwrO-noxbb_1MrqyjcHpPa8xSNd75p9l3Wyrm5o269sliaOqHbMXHsiTgimgIO2G55-9g/exec,                            // 예: 'https://script.google.com/macros/s/AKfy…/exec'
   DATA_DIR: 'data',                       // 서버가 없거나 응답하지 않을 때 쓰는 예비 자료
   ORG: '산업안전보건교육원'
 };
@@ -1226,14 +1219,25 @@ const MODEL_CHAIN = ['gemini-3-flash-preview', 'gemini-2.5-flash', 'gemini-2.5-f
 let MODEL_IDX = 0;
 let SERVER_DOWN = false;   // 서버 키 문제를 확인하면 이 세션에서는 서버 호출을 건너뛴다
 const modelNow = () => MODEL_CHAIN[MODEL_IDX];
-function resetModelChain() { MODEL_IDX = 0; }
+function resetModelChain() { MODEL_IDX = 0; ALLOW_FALLBACK = false; }
 function noteModelDrop(from, to, why) {
   if (typeof glog === 'function') glog(`<s>⚠</s> ${esc(from)} ${esc(why)} → <b>${esc(to)}</b>(으)로 전환합니다`);
 }
 
+/* ★ 모델 정책 — 기본은 최상위 모델(gemini-3)만 쓴다.
+   하위 모델은 품질이 떨어질 수 있으므로, gemini-3의 일일 할당량이 정말 소진되어
+   사용자가 "하위 모델로라도 생성"에 동의한 경우(ALLOW_FALLBACK)에만 연다. */
+let ALLOW_FALLBACK = false;
+const lastAllowed = () => ALLOW_FALLBACK ? MODEL_CHAIN.length : 1;
+const FALLBACK_ASK =
+  '기본 모델(Gemini 3)의 오늘 무료 할당량이 소진되었습니다.\n\n'
+  + '하위 모델(Gemini 2.5 Flash 등)로라도 지금 생성할까요?\n'
+  + '※ 하위 모델은 체크포인트 문장의 품질이 다소 떨어질 수 있습니다.\n\n'
+  + '[확인] 하위 모델로 지금 생성   [취소] 오늘은 생성하지 않음 (내일 자동 초기화)';
+
 async function callGemini(payload, tries = 2) {
   let lastErr = null;
-  for (let m = MODEL_IDX; m < MODEL_CHAIN.length; m++) {
+  for (let m = MODEL_IDX; m < lastAllowed(); m++) {
     const model = MODEL_CHAIN[m];
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${API_KEY}`;
     for (let i = 0; i < tries; i++) {
@@ -1256,13 +1260,13 @@ async function callGemini(payload, tries = 2) {
           } catch (x) {}
           const e = new Error('HTTP ' + res.status);
           e.fatal = (res.status === 400 || res.status === 403);        // 키·요청 문제 → 재시도 무의미
-          e.overload = (res.status === 503);                           // 과부하 → 아래 모델로
+          e.overload = (res.status === 503);                           // 과부하 → 잠시 뒤 같은 모델 재시도
           e.dayQuota = (res.status === 429 && /PerDay|PerHour|Daily/i.test(qids)); // 일일 소진 확인
           e.minute  = (res.status === 429 && !e.dayQuota);             // 분당 한도 — 기다리면 풀린다
           e.retryMs = retryMs;
-          e.quota = e.dayQuota || e.overload;                          // "아래 모델로 내려갈" 사유
-          /* 일일 소진이 마지막 모델에서까지 확인된 경우에만 '오늘은 끝'으로 판정한다 */
-          e.exhausted = e.dayQuota && m >= MODEL_CHAIN.length - 1;
+          e.quota = e.dayQuota || e.overload;
+          /* 허용된 마지막 모델에서 일일 소진이 확인되면 '지금은 더 못 씀' — 상위 흐름이 사용자에게 묻는다 */
+          e.exhausted = e.dayQuota && m >= lastAllowed() - 1;
           throw e;
         }
         const j = await res.json();
@@ -1272,23 +1276,26 @@ async function callGemini(payload, tries = 2) {
       } catch (err) {
         lastErr = err;
         if (err.fatal) throw err;
-        if (err.exhausted) throw err;                              // 일일 소진(PerDay·마지막 모델) — 더 시도해도 소용없다
+        if (err.exhausted) throw err;                              // 허용된 마지막 모델까지 일일 소진 — 상위에서 사용자에게 묻는다
         if (err.minute) {                                          // ★ 분당 한도 — 강등이 아니라 "대기"가 정답
           if (i < tries - 1) {
             await sleep(Math.min(Math.max(err.retryMs || 15000, 5000), 40000));  // 구글이 알려준 만큼 기다린다
             continue;                                              // 같은 모델로 재시도
           }
-          const next = MODEL_CHAIN[m + 1];                         // 기다려도 안 되면 그때 아래 모델로
+          const next = (m + 1 < lastAllowed()) ? MODEL_CHAIN[m + 1] : null;   // 허용된 경우에만 아래 모델
           if (next) { if (MODEL_IDX <= m) { MODEL_IDX = m + 1; noteModelDrop(model, next, '분당 한도'); } break; }
           continue;
         }
-        if (err.quota) {                                           // 일일 소진·과부하 → 아래 모델로 즉시 강등
-          const next = MODEL_CHAIN[m + 1];
+        if (err.quota) {                                           // 일일 소진·과부하
+          /* ★ 품질 우선: 과부하(503)는 대개 몇 초 안에 풀린다.
+             바로 강등하지 않고 같은 모델로 한 번 더 시도한 뒤에만 내려간다. */
+          if (err.overload && i < tries - 1) { await sleep(4000); continue; }
+          const next = (m + 1 < lastAllowed()) ? MODEL_CHAIN[m + 1] : null;   // 허용된 경우에만 아래 모델
           if (next) {
             if (MODEL_IDX <= m) { MODEL_IDX = m + 1; noteModelDrop(model, next, err.dayQuota ? '일일 할당량 소진' : '과부하'); }
             break;
           }
-          if (i < tries - 1) await sleep(10000);                   // 마지막 모델이면 회복을 기다린다
+          if (i < tries - 1) await sleep(10000);                   // 더 내려갈 수 없으면 회복을 기다린다
           continue;                                                 // 마지막 시도 뒤에는 기다리지 않는다
         }
         if (i === tries - 1) break;                                // 일시 오류는 같은 모델로 한 번 더
@@ -1443,34 +1450,38 @@ const logBox = $('gen-log');
 const glog = (html) => { logBox.insertAdjacentHTML('beforeend', html + '<br>'); logBox.scrollTop = logBox.scrollHeight; };
 
 function openAiModal() {
+  /* ★ 모달을 열 때마다 완전히 초기 상태로 되돌린다.
+     이전에는 업종·직종 입력값과 미리보기가 남아 있어, 나갔다가 다시 들어오면
+     직전 작업 내용이 그대로 보였다. */
+  const si = COMBO['industry-input'], sj = COMBO['job-type-input'];
+  $('industry-input').value = ''; if (si) si.committed = '';
+  $('job-type-input').value = '';  if (sj) sj.committed = '';
+  $('job-scope-note').textContent = '';
+  $('shared-status').classList.add('hide'); $('shared-status').innerHTML = '';
+  $('preview-box').classList.add('hide');
+  $('pv-focus').innerHTML = ''; $('pv-reason').textContent = ''; $('pv-stat').textContent = '계산 중…';
+  const chip = $('preview-box').querySelector('.chip'); if (chip) chip.textContent = '즉시 선별 완료';
   $('ai-error-message').textContent = '';
   $('ai-loading-message').className = 'hide';
+  $('ai-loading-message').innerHTML = ''; $('ai-loading-message').style.color = '';
   $('ai-progress-container').classList.add('hide');
-  $('preview-box').classList.add('hide');
-  logBox.innerHTML = ''; $('progress-bar-main').style.width = '0%';
+  logBox.innerHTML = '';
+  $('progress-bar-main').style.width = '0%';
+  $('progress-label-main').textContent = '문항 재작성 진행 중…';
   $('applyAiConfigBtn').style.display = 'inline-flex';
   $('applyAiConfigBtn').disabled = false;
+  const bt = $('applyAiConfigBtn').querySelector('.btn-text'), bs = $('applyAiConfigBtn').querySelector('.spinner');
+  if (bt) bt.style.display = 'inline'; if (bs) bs.style.display = 'none';
   $('cancelAiConfigBtn').textContent = '닫기';
   const canRewrite = SERVER || AI_READY;
   $('server-note').innerHTML = SERVER
     ? `<span class="chip ok">공용 서버 연결됨</span> <span class="mini">등록 ${SERVER.count}건 · 갱신 ${esc(SERVER.updated || '-')} · 신규 생성분은 자동으로 공용 목록에 등록됩니다.</span>`
     : '업종·직종을 입력하면 ① 관리자용·작업자용 선별은 <b>즉시(코드)</b>, ② 132개 문항 재작성은 <b>범주별 묶음 동시 호출</b>로 처리합니다.';
-  if (!canRewrite) { $('opt-norewrite').checked = true; $('opt-norewrite').disabled = true;
-    $('ai-error-message').textContent = '공용 서버와 API 키가 모두 없어 문항 재작성은 비활성화됩니다. 선별 기능은 정상 동작합니다.'; }
-  else { $('opt-norewrite').disabled = false; }
-  /* 공용 서버가 있으면 서버가, 없으면 브라우저가 직접 수행한다 */
-  const canSelect = SERVER || AI_READY;
-  $('opt-aiselect').closest('.kv').style.display = canSelect ? '' : 'none';
-  if (!canSelect) $('opt-aiselect').checked = false;
-  fillDatalists($('industry-input').value.trim()); syncJobField(); previewSelection();
+  if (!canRewrite)
+    $('ai-error-message').textContent = '공용 서버와 API 키가 모두 없어 문항 재작성 없이 선별만 수행합니다.';
+  fillDatalists(''); syncJobField(); previewSelection();
   show('aiConfigModal');
 }
-['opt-mtot', 'opt-wtot', 'opt-beta'].forEach(id => $(id).addEventListener('input', () => {
-  $('opt-mtot-v').textContent = $('opt-mtot').value;
-  $('opt-wtot-v').textContent = $('opt-wtot').value;
-  $('opt-beta-v').textContent = (+$('opt-beta').value / 100).toFixed(2);
-  previewSelection();
-}));
 /* ── 목록 입력창(콤보박스) ──
    · 새 업종·직종을 계속 만들어 쓰는 앱이므로 자유 입력이 기본이다. 목록은 이미 등록된 것을 고르는 지름길.
    · 입력창이나 캐럿을 누르면 값이 있어도 언제나 전체 목록이 열리고, 글자를 치면 그때만 걸러진다.
@@ -1640,8 +1651,9 @@ $('shared-status').addEventListener('click', e => {
   previewSelection();
 });
 
+/* 고급 설정 UI는 제거했다 — 검증된 기본값을 코드에 고정한다 */
 function currentOpts() {
-  return { managerTotal: +$('opt-mtot').value, workerTotal: +$('opt-wtot').value, beta: +$('opt-beta').value / 100, alpha: 0.3 };
+  return { managerTotal: 54, workerTotal: 20, beta: 0.6, alpha: 0.3 };
 }
 /** AI가 정한 중점 범주와 근거를 미리보기 박스에 표시 */
 function showSelectionReason(sel) {
@@ -1654,7 +1666,8 @@ function showSelectionReason(sel) {
   const label = $('preview-box').querySelector('.chip');
   if (label) { label.textContent = 'AI 우선순위 반영'; }
 }
-const AI_SELECT_ON = () => !!($('opt-aiselect') && $('opt-aiselect').checked && !$('opt-norewrite').checked);
+/* AI 우선순위 판단은 서버나 키가 있으면 항상 수행한다 (체크박스 UI 제거) */
+const AI_SELECT_ON = () => !!(SERVER || AI_READY);
 function previewSelection() {
   const ind = $('industry-input').value.trim(), job = $('job-type-input').value.trim();
   updateSharedStatus(ind, job);
@@ -1664,7 +1677,6 @@ function previewSelection() {
   const ms = performance.now() - t0;
   $('pv-stat').innerHTML =
     `관리자용 <b>${r.managerIds.length}</b>항목 · 작업자용 <b>${r.workerIds.length}</b>항목 &nbsp;(${ms.toFixed(2)}ms)`;
-  $('pv-grid').innerHTML = CATS.map(c => `<div><span>${esc(c)}</span><b>${r.quota.manager[c]} / ${r.quota.worker[c]}</b></div>`).join('');
 
   /* 9줄 표 대신 “어디에 비중을 뒀는지”를 먼저 보여준다 */
   const avg = CATS.reduce((a, c) => a + r.quota.manager[c] + r.quota.worker[c], 0) / CATS.length;
@@ -1675,7 +1687,7 @@ function previewSelection() {
     : '<span class="mini">특정 범주에 치우치지 않고 고르게 배분했습니다.</span>';
   $('pv-reason').textContent = AI_SELECT_ON()
     ? '지금은 키워드 규칙에 따른 임시 배분입니다. 생성할 때 AI가 이 업종·직종의 실제 작업 특성을 보고 항목을 다시 고릅니다.'
-    : '키워드 규칙에 따른 배분입니다. AI 우선순위 판단을 켜면 작업 특성을 반영해 항목을 다시 고릅니다.';
+    : '키워드 규칙에 따른 배분입니다.';
   $('preview-box').classList.remove('hide');
 }
 
@@ -1693,15 +1705,18 @@ $('applyAiConfigBtn').addEventListener('click', async () => {
   const t0 = performance.now();
 
   try {
+    /* 재작성 가능 여부 — 서버도 키도 없으면 선별만 수행한다 (체크박스 UI 없이 자동 판단) */
+    const NOREWRITE = !(SERVER || AI_READY);
+
     /* ⓪ 공용 자료 우선 — 이미 누군가 만들어 둔 직종이면 AI를 부르지 않는다 */
     const key = cacheKey(industry, jobType);
-    const local = $('opt-force').checked ? null : readCache(key);
+    const local = readCache(key);
     if (local) {
       glog('<b>✔</b> 내 브라우저 보관본에서 즉시 복원');
       finish(local.expert, local.managerIds, local.workerIds, industry, jobType, t0, '보관본', local.selection);
       return;
     }
-    const shared = $('opt-force').checked ? null : findShared(industry, jobType);
+    const shared = findShared(industry, jobType);
     if (shared) {
       glog(`<b>✔</b> 공용 자료 발견 — 내려받는 중 (${esc(shared.i)} / ${esc(shared.j)})`);
       const rec = await fetchShared(shared);
@@ -1717,7 +1732,7 @@ $('applyAiConfigBtn').addEventListener('click', async () => {
     let managerIds = sel.managerIds, workerIds = sel.workerIds;
     glog(`<b>✔</b> 선별 완료 (코드) — 관리자용 ${managerIds.length} / 작업자용 ${workerIds.length} · ${(performance.now() - t0).toFixed(1)}ms`);
 
-    if ($('opt-norewrite').checked) {
+    if (NOREWRITE) {
       const flat = {}; BASE.forEach(g => g.checkpoints.forEach(c => flat[c.id] = { t: c.text, i: c.ideas }));
       saveIfShared(key, { industry, jobType, expert: flat, managerIds, workerIds }, false);
       finish(flat, managerIds, workerIds, industry, jobType, t0, false);
@@ -1727,7 +1742,7 @@ $('applyAiConfigBtn').addEventListener('click', async () => {
     /* ②-A 공용 서버가 있으면 서버가 생성하고 그 자리에서 공용 목록에 등록한다.
            접속자는 아무것도 보낼 필요가 없고, API 키도 서버에만 있다. */
     if (SERVER && !SERVER_DOWN) {
-      glog(`⚡ 공용 서버에 생성 요청 — 132문항을 나눠 동시 처리 (30~60초) · 판 ${BUILD}`);
+      glog(`⚡ 공용 서버에 생성 요청 — 132문항을 나눠 동시 처리 (보통 30~90초, 한도 대기 시 최대 3분) · 판 ${BUILD}`);
       const tServer = performance.now();
       $('progress-label-main').textContent = '공용 서버에서 생성 중…';
       const tick = setInterval(() => {
@@ -1736,8 +1751,20 @@ $('applyAiConfigBtn').addEventListener('click', async () => {
         $('progress-label-main').textContent = `공용 서버에서 생성 중… ${s}초`;
       }, 500);
       try {
-        const r = await api({ action: 'generate', industry, jobType, managerIds, workerIds,
-                              aiSelect: $('opt-aiselect').checked, force: $('opt-force').checked });
+        let r = await api({ action: 'generate', industry, jobType, managerIds, workerIds,
+                            aiSelect: true, force: false, allowFallback: false });
+        /* ★ 기본 모델(gemini-3)의 일일 할당량이 소진된 경우 — 자동으로 내려가지 않고 사용자에게 묻는다 */
+        if (r && r.needFallback) {
+          glog('<s>⚠</s> 기본 모델(Gemini 3)의 오늘 무료 할당량이 소진되었습니다');
+          if (confirm(FALLBACK_ASK)) {
+            glog('<s>⚠</s> 사용자 동의 — <b>하위 모델</b>로 생성합니다 (문장 품질이 다소 떨어질 수 있습니다)');
+            r = await api({ action: 'generate', industry, jobType, managerIds, workerIds,
+                            aiSelect: true, force: false, allowFallback: true });
+          } else {
+            clearInterval(tick);
+            throw Object.assign(new Error('기본 모델 할당량 소진 — 사용자가 하위 모델 생성을 원하지 않아 취소했습니다'), { userCancelled: true });
+          }
+        }
         clearInterval(tick);
         if (r && r.quotaExhausted) { clearInterval(tick); throw Object.assign(new Error(r.error), { quotaExhausted: true }); }
         if (r && r.rpmLimited)     { clearInterval(tick); throw Object.assign(new Error(r.error), { rpmLimited: true }); }
@@ -1748,6 +1775,8 @@ $('applyAiConfigBtn').addEventListener('click', async () => {
           const rd = (r.rounds || []).map(x => `${x.n}건/${x.model.replace('gemini-', '')} ${x.secs}초`).join(' → ');
           glog(`<span class="mini">· 서버 생성 ${r.elapsed}초 · ${r.pieces || '?'}묶음${rd ? ' · ' + esc(rd) : ''}</span>`);
         }
+        if ((r.models || []).length > 1 || (r.models || [])[0] !== MODEL_CHAIN[0])
+          glog(`<span class="mini">· 사용 모델: ${(r.models || []).map(esc).join(' → ')}</span>`);
         if (r.cached) glog('<b>✔</b> 기존 공용 자료를 그대로 사용했습니다 (AI 호출 없음)');
         else if (chg >= 132) glog(`<b>✔</b> 생성 완료 — 132문항 모두 현장 표현으로 재작성`);
         else glog(`<s>⚠</s> 생성 완료 — 실제로 바뀐 문항 <b>${chg}</b>/132 (나머지는 원문 유지)`);
@@ -1764,6 +1793,15 @@ $('applyAiConfigBtn').addEventListener('click', async () => {
         return;
       } catch (e) {
         clearInterval(tick);
+        /* 사용자가 하위 모델 생성을 거절 — 폴백 없이 여기서 끝낸다 */
+        if (e.userCancelled) {
+          glog(`<s>✖</s> ${esc(e.message)}`);
+          $('ai-error-message').innerHTML =
+            '기본 모델(Gemini 3)의 오늘 무료 할당량이 소진되어 생성을 취소했습니다.<br>'
+            + '<span class="mini">· 내일(태평양시 기준 자정) 자동으로 초기화됩니다 · 급하면 Google AI Studio에서 결제를 연결해 유료 등급으로 올리세요 '
+            + '· 다시 「생성하기」를 누르면 하위 모델 사용 여부를 다시 물어봅니다.</span>';
+          throw new Error('생성 취소');
+        }
         /* 서버 키 문제라면 이 세션에서는 다시 시도하지 않는다 — 매번 수십 초를 버리게 된다 */
         if (e.quotaExhausted) {
           /* 서버와 브라우저가 같은 무료 등급을 쓰는 경우가 많다. 여기서 또 시도하면 남은 할당량까지 태운다. */
@@ -1771,7 +1809,7 @@ $('applyAiConfigBtn').addEventListener('click', async () => {
           $('ai-error-message').innerHTML =
             '오늘 Gemini 무료 할당량이 소진되어 생성할 수 없습니다.<br>'
             + '<span class="mini">· 내일 자동으로 초기화됩니다 · 급하면 Google AI Studio에서 결제를 연결해 유료 등급으로 올리세요 '
-            + '· 그동안에는 「문항 재작성 없이 선별만」으로 관리자용·작업자용 선별은 그대로 쓸 수 있습니다.</span>';
+            + '· 관리자용·작업자용 선별(코드) 기능은 그대로 쓸 수 있습니다.</span>';
           throw new Error('할당량 소진');
         }
         if (e.rpmLimited) {
@@ -1780,7 +1818,7 @@ $('applyAiConfigBtn').addEventListener('click', async () => {
           glog(`<s>✖</s> ${esc(e.message)}`);
           $('ai-error-message').innerHTML =
             '분당 요청 한도(RPM)에 걸렸습니다 — <b>할당량 소진이 아닙니다.</b><br>'
-            + '<span class="mini">· 1~2분 뒤 「기존 자료 무시하고 다시 생성」을 누르면 대부분 정상 완료됩니다.</span>';
+            + '<span class="mini">· 1~2분 뒤 같은 업종·직종으로 「생성하기」를 다시 누르면 대부분 정상 완료됩니다. (실패한 생성은 저장되지 않아 그대로 재시도하면 됩니다)</span>';
           throw new Error('분당 한도 — 잠시 뒤 재시도');
         }
         if (/API 키가 거부|API key not valid/i.test(e.message)) {
@@ -1824,11 +1862,10 @@ $('applyAiConfigBtn').addEventListener('click', async () => {
       .catch(e => { bump(); glog(`<s>✖</s> ${esc(g.category)} — 실패(${esc(e.message)})`);
                     return { category: g.category, map: new Map(), group: g, failed: true, exhausted: !!e.exhausted }; }); };
 
-    const selJob = $('opt-aiselect').checked
-      ? aiRefineSelection(industry, jobType, opts.managerTotal, opts.workerTotal)
+    /* AI 선별은 항상 재작성과 병렬로 수행한다 (실패 시 코드 선별 유지) */
+    const selJob = aiRefineSelection(industry, jobType, opts.managerTotal, opts.workerTotal)
           .then(r => { glog('<b>✔</b> AI 선별 확인 완료 (ID만 수신)'); return r; })
-          .catch(() => { glog('<s>✖</s> AI 선별 확인 실패 → 코드 선별 유지'); return null; })
-      : Promise.resolve(null);
+          .catch(() => { glog('<s>✖</s> AI 선별 확인 실패 → 코드 선별 유지'); return null; });
 
     let [results, aiSel] = await Promise.all([
       runLimited(chunks.map(g => () => attempt(g)), REWRITE_CONCURRENCY),
@@ -1836,10 +1873,23 @@ $('applyAiConfigBtn').addEventListener('click', async () => {
     ]);
 
     /* 남은 실패분 재시도 — 한도 초과였다면 아래 모델로 내려간 뒤라 대개 통과한다 */
-    const failed = results.filter(r => r.failed);
+    let failed = results.filter(r => r.failed);
     const deadQuota = results.some(r => r.exhausted);
-    if (deadQuota) {
-      glog('<s>✖</s> 오늘 무료 할당량이 소진되어 재시도를 중단합니다 — 내일 초기화됩니다');
+    if (deadQuota && !ALLOW_FALLBACK) {
+      /* ★ 기본 모델(gemini-3) 일일 소진 — 자동으로 내려가지 않고 사용자에게 묻는다 */
+      glog('<s>⚠</s> 기본 모델(Gemini 3)의 오늘 무료 할당량이 소진되었습니다');
+      if (confirm(FALLBACK_ASK)) {
+        ALLOW_FALLBACK = true; MODEL_IDX = Math.max(MODEL_IDX, 1);
+        glog(`<s>⚠</s> 사용자 동의 — <b>${modelNow()}</b>(하위 모델)로 실패한 ${failed.length}묶음을 다시 생성합니다 (품질이 다소 떨어질 수 있습니다)`);
+        await sleep(800);
+        done = Math.max(0, done - failed.length);
+        const again = await runLimited(failed.map(r => () => attempt(r.group)), 2);
+        results = results.map(r => r.failed ? (again.shift() || r) : r);
+      } else {
+        glog('<s>✖</s> 하위 모델 사용을 원치 않아 남은 문항은 원문으로 둡니다 — 내일 다시 생성하면 채워집니다');
+      }
+    } else if (deadQuota) {
+      glog('<s>✖</s> 허용된 모델의 오늘 무료 할당량이 모두 소진되어 재시도를 중단합니다 — 내일 초기화됩니다');
     } else if (failed.length) {
       glog(`⏳ 실패한 ${failed.length}묶음을 ${modelNow()}(으)로 다시 시도합니다`);
       await sleep(1200);
@@ -1875,7 +1925,7 @@ $('applyAiConfigBtn').addEventListener('click', async () => {
     results.forEach(r => r.map.forEach((v, id) => { flat[id] = { t: v.text, i: v.ideas }; rewritten++; }));
     if (rewritten >= 132) glog('<b>✔</b> 병합 완료 — 132문항 모두 현장 표현으로 재작성');
     else glog(`<s>⚠</s> 병합 완료 — 재작성 <b>${rewritten}</b>/132, <b>원문 그대로 남은 문항 ${132 - rewritten}개</b>. `
-              + '잠시 뒤 「기존 자료 무시하고 다시 생성」으로 재시도하면 채워집니다.');
+              + '남은 문항은 다음 생성 때 자동으로 채워집니다.');
 
     saveIfShared(key, { industry, jobType, expert: flat, managerIds, workerIds, selection }, false);
     finish(flat, managerIds, workerIds, industry, jobType, t0, false, selection);
@@ -1973,7 +2023,7 @@ function fileId(i, j) {
 let SERVER = null;      // 서버가 살아있으면 여기에 상태가 담긴다
 
 /* Apps Script 는 사전 요청(preflight)을 처리하지 못하므로 POST는 text/plain 으로 보낸다 */
-async function api(body, ms = 180000) {
+async function api(body, ms = 300000) {   // 서버가 분당 한도 회복을 기다리는 시간까지 감안해 5분
   const ctl = new AbortController();
   const timer = setTimeout(() => ctl.abort(), ms);
   try {
@@ -2216,8 +2266,13 @@ function loadCacheList() {
 }
 $('cache-search-input').addEventListener('input', loadCacheList);
 
-/* ── 관리자 모드 진입 — 토큰을 서버에 검증한 뒤에만 admin.html 로 넘긴다 ── */
+/* ── 관리자 모드 진입 — 토큰을 서버에 검증한 뒤에만 admin.html 로 넘긴다 ──
+   ★ 보안: 서버 주소·관리자 토큰은 localStorage 에 절대 저장하지 않는다 (공용 PC에 영구히 남는다).
+   admin.html 로 넘어가는 순간에만 sessionStorage 에 1회용으로 실어 보내고,
+   admin.html 이 읽는 즉시 지운다. 예전 버전이 남겨 둔 localStorage 값도 발견 즉시 삭제한다. */
 const ADMIN_CFG = 'ergAdminCfg';
+const ADMIN_HANDOFF = 'ergAdminHandoff';
+try { localStorage.removeItem(ADMIN_CFG); } catch (e) {}   // 과거 버전이 남긴 토큰 청소
 function openAdminGate() {
   $('admin-token-input').value = '';
   const msg = $('admin-gate-msg');
@@ -2241,8 +2296,8 @@ async function enterAdmin() {
   try {
     const r = await api({ action: 'admin', op: 'list', token: tok }, 20000);
     if (!r || !r.ok) throw new Error((r && r.error) || '인증에 실패했습니다');
-    let prev = {}; try { prev = JSON.parse(localStorage.getItem(ADMIN_CFG) || '{}'); } catch (e) {}
-    localStorage.setItem(ADMIN_CFG, JSON.stringify({ ...prev, api: CONFIG.API_URL, atoken: tok }));
+    /* 1회용 인계 — admin.html 이 첫 로드에서 읽고 즉시 지운다. 어디에도 영구 저장하지 않는다. */
+    try { sessionStorage.setItem(ADMIN_HANDOFF, JSON.stringify({ api: CONFIG.API_URL, atoken: tok })); } catch (e) {}
     msg.style.color = '#16a34a'; msg.textContent = '✔ 확인되었습니다. 관리자 화면으로 이동합니다…';
     setTimeout(() => { location.href = 'admin.html'; }, 400);
   } catch (e) {
@@ -2303,6 +2358,11 @@ function exportHtml(payload) {
     document.title = `${S.industry} - ${S.jobType} 인간공학 체크포인트`;
     $('app-title').textContent = `${S.industry} - ${S.jobType} 인간공학 체크포인트`;
     document.querySelectorAll('.ai-only').forEach(el => el.classList.add('hide'));
+    /* ★ 생성·배포된 체크포인트 파일에는 관리자 기능이 필요 없다 —
+       「관리자 모드 접속」 메뉴와 구분선, 관리자 진입 모달을 통째로 제거한다 */
+    ['admin-menu-divider', 'admin-gate-btn', 'adminGateModal'].forEach(id => {
+      const el = $(id); if (el) el.remove();
+    });
   } else {
     loadExpert(BASE);
     const r = selectIds(PRI, '', '');       // 기본(범용) 선별
