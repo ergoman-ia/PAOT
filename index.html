@@ -701,7 +701,7 @@ const CONFIG = {
   /* 공용 서버(Google Apps Script) 주소.
      넣으면  → 신규 직종이 자동으로 서버에 등록되어 다음 사람이 즉시 사용. API 키도 서버에 보관.
      비우면  → 아래 data/ 폴더만 읽는 읽기 전용 방식으로 동작. */
-  API_URL: 'https://script.google.com/macros/s/AKfycbyJPB2QD4k7uL6qNBaSa5faXfJbMd87ihCAdU0m_3rz5jOy1EMCRq4Xyc_ts4_LP0T73Q/exec',                            // 예: 'https://script.google.com/macros/s/AKfy…/exec'
+  API_URL: 'https://script.google.com/macros/s/AKfycbyJPB2QD4k7uL6qNBaSa5faXfJbMd87ihCAdU0m_3rz5jOy1EMCRq4Xyc_ts4_LP0T73Q/exec',
   DATA_DIR: 'data',                       // 서버가 없거나 응답하지 않을 때 쓰는 예비 자료
   ORG: '산업안전보건교육원'
 };
@@ -2317,49 +2317,29 @@ $('cache-search-input').addEventListener('input', loadCacheList);
 const ADMIN_CFG = 'ergAdminCfg';
 const ADMIN_HANDOFF = 'ergAdminHandoff';
 try { localStorage.removeItem(ADMIN_CFG); } catch (e) {}   // 과거 버전이 남긴 토큰 청소
-async function openAdminGate() {
-  /* ★ 관문은 차단하지 않는다 — 서버 연결 상태와 무관하게 토큰 입력은 항상 가능하다.
-     연결 확인·재시도는 admin.html 안의 「연결 확인」이 담당한다. 여기서는
-     이동 전에 토큰을 미리 검증해 줄 수 있으면 해 주고, 검증 자체가 불가능하면
-     (서버 일시 장애 등) 막지 않고 관리자 화면으로 보낸다. */
+function openAdminGate() {
+  /* ★ 관문은 서버를 확인하지 않는다 — 토큰만 받아 넘긴다.
+     연결 확인도, 토큰 검증도 admin.html 이 담당하므로 여기서 기다릴 이유가 없다. */
   $('admin-token-input').value = '';
   const msg = $('admin-gate-msg');
   msg.style.color = '#6b7280';
+  msg.textContent = '';
   $('adminGateOk').disabled = false;
   $('admin-token-input').disabled = false;
-  msg.textContent = (SERVER && CONFIG.API_URL) ? ''
-    : '서버 연결이 아직 확인되지 않았습니다 — 이동하면 관리자 화면에서 연결 확인을 다시 시도합니다.';
   show('adminGateModal');
   setTimeout(() => $('admin-token-input').focus(), 50);
-  /* 배경에서 조용히 한 번 재확인해 두면 아래 enterAdmin 의 사전 검증 성공률이 높아진다 */
-  if (!SERVER && CONFIG.API_URL) { try { await loadCatalog(); if (SERVER) msg.textContent = ''; } catch (e) {} }
 }
-async function enterAdmin() {
+function enterAdmin() {
   const tok = $('admin-token-input').value.trim();
   const msg = $('admin-gate-msg');
   if (!tok) { msg.style.color = '#b45309'; msg.textContent = '토큰을 입력해 주세요.'; return; }
   $('adminGateOk').disabled = true;
-  msg.style.color = '#6b7280'; msg.textContent = '확인 중…';
-  const go = note => {
-    /* 1회용 인계 — admin.html 이 첫 로드에서 읽고 즉시 지운다. 어디에도 영구 저장하지 않는다. */
-    try { sessionStorage.setItem(ADMIN_HANDOFF, JSON.stringify({ api: CONFIG.API_URL, atoken: tok })); } catch (e) {}
-    msg.style.color = note ? '#b45309' : '#16a34a';
-    msg.textContent = note || '✔ 확인되었습니다. 관리자 화면으로 이동합니다…';
-    setTimeout(() => { location.href = 'admin.html'; }, note ? 900 : 400);
-  };
-  let r = null, reachable = true, netErr = '';
-  try { r = await api({ action: 'admin', op: 'list', token: tok }, 20000); }
-  catch (e) { reachable = false; netErr = e.message; }
-  if (r && r.ok) { go(); return; }                      // 서버 정상 + 토큰 일치 → 이동
-  if (r && !r.ok) {                                     // 서버는 응답했고 토큰이 틀림 → 여기서만 막는다
-    msg.style.color = '#dc2626';
-    msg.textContent = '✖ ' + ((r && r.error) || '인증에 실패했습니다 — 토큰을 확인해 주세요.');
-    $('adminGateOk').disabled = false;
-    return;
-  }
-  /* 서버 확인 자체가 불가(404·시간 초과·네트워크) — 차단하지 않고 이동시킨다.
-     admin.html 이 인계값으로 「연결 확인」을 다시 시도하고, 토큰이 틀렸다면 그 화면에서 알려준다. */
-  go('⚠ 지금은 서버 확인이 되지 않습니다(' + netErr + '). 관리자 화면으로 이동합니다 — 그 안에서 「연결 확인」을 다시 눌러 주세요.');
+  /* 1회용 인계 — admin.html 이 첫 로드에서 읽고 즉시 지운다. 어디에도 영구 저장하지 않는다.
+     토큰이 맞는지는 admin.html 의 「연결 확인」에서 서버가 판단한다. */
+  try { sessionStorage.setItem(ADMIN_HANDOFF, JSON.stringify({ api: CONFIG.API_URL, atoken: tok })); } catch (e) {}
+  msg.style.color = '#6b7280';
+  msg.textContent = '관리자 화면으로 이동합니다…';
+  setTimeout(() => { location.href = 'admin.html'; }, 250);
 }
 menu('admin-gate-btn', openAdminGate);
 $('adminGateOk').addEventListener('click', enterAdmin);
