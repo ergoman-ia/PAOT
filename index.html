@@ -295,24 +295,31 @@
             margin-top: 5px;
         }
         #aiConfigModal .modal-content {
-            /* ★ 모달을 위아래로 넉넉하게 — 업종·직종 입력과 미리보기까지는
-               스크롤 없이 한 화면에 들어오도록 최소 높이를 확보하고,
-               화면(뷰포트)을 넘어가지는 않게 가둔다 */
-            min-height: min(78vh, 720px);
-            max-height: 94vh;
-            margin: 3vh auto;
+            /* 업종·직종 입력이 고정 영역으로 올라가 본문이 짧아졌다.
+               스크롤 없이 한 화면에 들어오도록 넉넉한 높이만 확보한다. */
+            max-height: 92vh;
+            margin: 4vh auto;
             display: flex;
             flex-direction: column;
+        }
+        #aiConfigModal .modal-fixed {
+            /* ★ 스크롤되지 않는 고정 영역 — 업종·직종 입력은 항상 같은 자리에 보인다 */
+            flex: 0 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            padding: 4px 0 14px;
+            border-bottom: 1px solid #f1f5f9;
+            overflow: visible;
         }
         #aiConfigModal .modal-body {
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            gap: 12px;
             flex: 1 1 auto;
-            /* 내용이 최소 높이를 넘길 때(긴 생성 로그)만 본문이 내부 스크롤된다.
-               업종·직종 선택 단계에서는 내용이 짧아 드롭다운이 잘릴 일이 없다. */
+            min-height: 140px;
             overflow-y: auto;
-            min-height: 0;
+            padding-top: 12px;
         }
         #aiConfigModal .form-group {
             display: flex;
@@ -453,8 +460,6 @@
 .mini{font-size:.8rem;color:#6b7280}
 .pill-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .pill{padding:3px 9px;border-radius:6px;background:#f3f4f6;font-size:.78rem}
-.gen-log{max-height:170px;overflow:auto;font-size:.8rem;font-family:ui-monospace,Menlo,monospace;background:#0f172a;color:#cbd5e1;padding:10px;border-radius:8px;margin-top:10px;line-height:1.6}
-.gen-log b{color:#4ade80}.gen-log s{color:#f87171;text-decoration:none}
 details.adv{margin-top:12px;border-top:1px solid #eee;padding-top:10px}
 details.adv summary{cursor:pointer;font-size:.88rem;color:#4b5563;font-weight:600}
 .kv{display:flex;gap:8px;align-items:center;margin-top:8px;font-size:.85rem}
@@ -490,7 +495,6 @@ details.adv summary{cursor:pointer;font-size:.88rem;color:#4b5563;font-weight:60
   <header>
     <h1 id="app-title">인간공학 체크포인트(ILO)</h1>
     <p id="app-sub">작업장의 안전, 보건 및 작업조건 개선</p>
-    <p class="mini no-print" style="margin:2px 0 0;color:#9ca3af">판 <span id="build-stamp">-</span></p>
   </header>
 
   <nav id="category-nav">    
@@ -576,7 +580,7 @@ details.adv summary{cursor:pointer;font-size:.88rem;color:#4b5563;font-weight:60
     <ul style="list-style:disc;padding-left:20px">
       <li style="margin-bottom:8px"><b>저장/불러오기</b> — 조치여부 상태를 CSV로 백업·복원합니다.</li>
       <li style="margin-bottom:8px"><b>체크포인트(인쇄용) 생성</b> — 작업자용·관리자용·전문가용 보고서를 즉시 만들어 인쇄합니다.</li>
-      <li style="margin-bottom:8px" class="ai-only"><b>맞춤 업종·직종별 체크포인트 생성</b> — 업종·직종을 넣으면 132개 문항이 그 현장 용어로 재작성된 전용 HTML 파일이 내려받아집니다. 132문항을 작은 묶음으로 나눠 동시에 처리하므로 보통 30~60초, 늦어도 100초 안에 끝납니다.</li>
+      <li style="margin-bottom:8px" class="ai-only"><b>맞춤 업종·직종별 체크포인트 생성</b> — 업종·직종을 넣으면 132개 문항이 그 현장 용어로 재작성된 전용 HTML 파일이 내려받아집니다. 생성에는 보통 60~100초가 걸립니다.</li>
     </ul>
     <h4 style="margin-top:18px;color:#1e3a8a">3. 관리자용·작업자용은 어떻게 뽑히나요?</h4>
     <p class="mini">기존 20개 직종의 검증된 선별 결과를 통계로 학습한 <b>내장 우선순위표</b>와 업종·직종 키워드 가중치로 계산합니다. AI 호출 없이 즉시 계산되며, 문장은 전문가용 132개에서 ID로 그대로 인용하므로 원문과 100% 일치합니다.</p>
@@ -587,8 +591,8 @@ details.adv summary{cursor:pointer;font-size:.88rem;color:#4b5563;font-weight:60
 <!-- 맞춤 생성 -->
 <div id="aiConfigModal" class="modal"><div class="modal-content" style="max-width:640px">
   <div class="modal-header"><h3>맞춤 업종·직종별 체크포인트 생성</h3><button id="closeAiConfigModal" class="modal-close">&times;</button></div>
-  <div class="modal-body">
-    <p class="mini" id="server-note">업종·직종을 입력하면 ① 관리자용·작업자용 선별은 <b>즉시(코드)</b>, ② 132개 문항 현장 맞춤 재작성은 <b>작은 묶음 22개 동시 호출</b>로 처리합니다.</p>
+  <!-- ★ 업종·직종 입력은 스크롤되지 않는 고정 영역에 둔다 -->
+  <div class="modal-fixed">
     <div class="form-group">
       <label for="industry-input">업종 <span class="mini">(예: 건설업, 제조업, 화학제품제조업, 선박건조수리업)</span></label>
       <div class="combo" id="industry-combo">
@@ -606,10 +610,11 @@ details.adv summary{cursor:pointer;font-size:.88rem;color:#4b5563;font-weight:60
       </div>
       <div id="job-scope-note" class="mini" style="margin-top:4px;color:#6b7280"></div>
     </div>
+  </div>
+  <div class="modal-body">
+    <div id="shared-status" class="hide"></div>
 
-    <div id="shared-status" class="hide" style="margin:4px 0 10px"></div>
-
-    <div id="preview-box" class="hide" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;margin-top:6px">
+    <div id="preview-box" class="hide" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px">
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
         <span class="chip ok">즉시 선별 완료</span>
         <span class="mini" id="pv-stat">계산 중…</span>
@@ -621,18 +626,29 @@ details.adv summary{cursor:pointer;font-size:.88rem;color:#4b5563;font-weight:60
 
     <div id="ai-error-message" class="error-message"></div>
 
-    <div id="ai-progress-container" class="hide" style="margin-top:14px">
+    <div id="ai-progress-container" class="hide">
       <div class="progress-item">
-        <label id="progress-label-main">문항 재작성 진행 중…</label>
+        <label id="progress-label-main">체크포인트 생성 중…</label>
         <div class="progress-bar-bg"><div id="progress-bar-main" class="progress-bar-fg"></div></div>
       </div>
-      <div class="gen-log" id="gen-log"></div>
     </div>
-    <p id="ai-loading-message" class="hide" style="margin-top:10px"></p>
   </div>
   <div class="modal-footer">
     <button id="applyAiConfigBtn" class="btn btn-primary"><span class="btn-text">생성하기</span><div class="spinner" style="display:none"></div></button>
     <button id="cancelAiConfigBtn" class="btn btn-secondary">닫기</button>
+  </div>
+</div></div>
+
+<!-- 하위 모델 사용 확인 -->
+<div id="fallbackModal" class="modal"><div class="modal-content" style="max-width:440px">
+  <div class="modal-header"><h3>하위 모델로 생성할까요?</h3></div>
+  <div class="modal-body">
+    <p style="margin:0 0 8px">기본 모델(Gemini 3)을 지금 사용할 수 없습니다.</p>
+    <p class="mini" style="margin:0">하위 모델(Gemini 2.5)로 생성하면 체크포인트 문장의 품질이 다소 떨어질 수 있습니다.</p>
+  </div>
+  <div class="modal-footer">
+    <button id="fallbackYes" class="btn btn-primary">하위 모델로 생성</button>
+    <button id="fallbackNo" class="btn btn-secondary">취소</button>
   </div>
 </div></div>
 
@@ -681,7 +697,6 @@ const PRISTINE_HTML = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
 /* ═══════════ 운영 설정 (교수실에서 이 부분만 수정하시면 됩니다) ═══════════ */
 /* 배포 판 구분용. 브라우저 캐시 때문에 옛 파일이 떠 있는지 바로 알 수 있다.
    파일을 고칠 때마다 이 값을 올린다. */
-const BUILD = '2026-08-18 g';
 const CONFIG = {
   /* 공용 서버(Google Apps Script) 주소.
      넣으면  → 신규 직종이 자동으로 서버에 등록되어 다음 사람이 즉시 사용. API 키도 서버에 보관.
@@ -1234,12 +1249,6 @@ function noteModelDrop(from, to, why) {
    사용자가 "하위 모델로라도 생성"에 동의한 경우(ALLOW_FALLBACK)에만 연다. */
 let ALLOW_FALLBACK = false;
 const lastAllowed = () => ALLOW_FALLBACK ? MODEL_CHAIN.length : 1;
-const FALLBACK_ASK =
-  '기본 모델(Gemini 3)을 지금 사용할 수 없습니다.\n'
-  + '(오늘 무료 할당량이 소진되었거나, 요청 한도가 계속 걸리는 상태)\n\n'
-  + '하위 모델(Gemini 2.5 Flash 등)로라도 지금 생성할까요?\n'
-  + '※ 하위 모델은 체크포인트 문장의 품질이 다소 떨어질 수 있습니다.\n\n'
-  + '[확인] 하위 모델로 지금 생성   [취소] 생성하지 않음 (잠시 뒤 또는 내일 다시 시도)';
 
 async function callGemini(payload, tries = 2) {
   let lastErr = null;
@@ -1452,8 +1461,42 @@ reason: 왜 그 범주를 중시했는지 한국어 2문장 이내. 직종의 �
 
 /* ---------- 9. 맞춤 생성 화면 ---------- */
 const $ = id => document.getElementById(id);
-const logBox = $('gen-log');
-const glog = (html) => { logBox.insertAdjacentHTML('beforeend', html + '<br>'); logBox.scrollTop = logBox.scrollHeight; };
+/* 생성 로그는 화면에 노출하지 않는다 — 사용자에게는 진행바만 보여주고,
+   상세 내역은 개발자 콘솔에만 남긴다. */
+const glog = (html) => { try { console.info(String(html).replace(/<[^>]*>/g, '')); } catch (e) {} };
+/* 진행 표시 — "체크포인트 생성 중… (12초)" 한 줄과 진행바 */
+let PROG_TIMER = null;
+function progStart(t0, label = '체크포인트 생성 중') {
+  progStop();
+  $('ai-progress-container').classList.remove('hide');
+  const tick = () => {
+    const s = Math.round((performance.now() - t0) / 1000);
+    $('progress-label-main').textContent = `${label}… (${s}초)`;
+    $('progress-bar-main').style.width = Math.min(95, 8 + s * 1.1) + '%';
+  };
+  tick(); PROG_TIMER = setInterval(tick, 500);
+}
+function progStop(done) {
+  if (PROG_TIMER) { clearInterval(PROG_TIMER); PROG_TIMER = null; }
+  if (done) $('progress-bar-main').style.width = '100%';
+}
+/* 하위 모델 사용 확인 — 별도 창으로 묻는다 */
+function askFallback() {
+  return new Promise(resolve => {
+    const box = document.getElementById('fallbackModal');
+    const yes = $('fallbackYes'), no = $('fallbackNo');
+    const close = v => {
+      hide('fallbackModal');
+      yes.onclick = null; no.onclick = null; box.removeEventListener('click', bg);
+      resolve(v);
+    };
+    const bg = e => { if (e.target === box) close(false); };   // 배경 클릭도 취소로 처리
+    yes.onclick = () => close(true);
+    no.onclick = () => close(false);
+    box.addEventListener('click', bg);
+    show('fallbackModal');
+  });
+}
 
 function openAiModal() {
   /* ★ 모달을 열 때마다 완전히 초기 상태로 되돌린다.
@@ -1468,22 +1511,16 @@ function openAiModal() {
   $('pv-focus').innerHTML = ''; $('pv-reason').textContent = ''; $('pv-stat').textContent = '계산 중…';
   const chip = $('preview-box').querySelector('.chip'); if (chip) chip.textContent = '즉시 선별 완료';
   $('ai-error-message').textContent = '';
-  $('ai-loading-message').className = 'hide';
-  $('ai-loading-message').innerHTML = ''; $('ai-loading-message').style.color = '';
+  progStop();
   $('ai-progress-container').classList.add('hide');
-  logBox.innerHTML = '';
   $('progress-bar-main').style.width = '0%';
-  $('progress-label-main').textContent = '문항 재작성 진행 중…';
+  $('progress-label-main').textContent = '체크포인트 생성 중…';
   $('applyAiConfigBtn').style.display = 'inline-flex';
   $('applyAiConfigBtn').disabled = false;
   const bt = $('applyAiConfigBtn').querySelector('.btn-text'), bs = $('applyAiConfigBtn').querySelector('.spinner');
   if (bt) bt.style.display = 'inline'; if (bs) bs.style.display = 'none';
   $('cancelAiConfigBtn').textContent = '닫기';
-  const canRewrite = SERVER || AI_READY;
-  $('server-note').innerHTML = SERVER
-    ? `<span class="chip ok">공용 서버 연결됨</span> <span class="mini">등록 ${SERVER.count}건 · 갱신 ${esc(SERVER.updated || '-')} · 신규 생성분은 자동으로 공용 목록에 등록됩니다.</span>`
-    : '업종·직종을 입력하면 ① 관리자용·작업자용 선별은 <b>즉시(코드)</b>, ② 132개 문항 재작성은 <b>범주별 묶음 동시 호출</b>로 처리합니다.';
-  if (!canRewrite)
+  if (!(SERVER || AI_READY))
     $('ai-error-message').textContent = '공용 서버와 API 키가 모두 없어 문항 재작성 없이 선별만 수행합니다.';
   fillDatalists(''); syncJobField(); previewSelection();
   show('aiConfigModal');
@@ -1641,8 +1678,8 @@ function updateSharedStatus(ind, job) {
   }
   const sug = suggestShared(ind, job);
   const howto = SERVER
-    ? '공용 자료에 없어 새로 생성합니다 (보통 30~60초, 최대 100초). 생성되면 <b>공용 목록에 자동 등록</b>되어 다음 이용자부터 바로 쓰입니다.'
-    : '공용 자료에 없어 새로 생성합니다 (보통 30~60초, 최대 100초). 공용 서버에 연결되어 있지 않아 <b>이 브라우저에서만</b> 쓰이는 임시본이 됩니다.';
+    ? '공용 자료에 없어 새로 생성합니다 (60~100초). 생성되면 <b>공용 목록에 자동 등록</b>됩니다.'
+    : '공용 자료에 없어 새로 생성합니다 (60~100초). 공용 서버에 연결되어 있지 않아 <b>이 브라우저에서만</b> 쓰이는 임시본이 됩니다.';
   box.innerHTML = `<span class="chip warn">🆕 신규 직종</span> <span class="mini">${howto}</span>`
     + (sug.length ? `<div class="pill-list">${sug.map(x =>
         `<button class="pill sug-btn" data-i="${esc(x.i)}" data-j="${esc(x.j)}" style="border:1px solid #c7d2fe;cursor:pointer">↩ ${esc(x.i)} / ${esc(x.j)}</button>`).join('')}
@@ -1707,8 +1744,8 @@ $('applyAiConfigBtn').addEventListener('click', async () => {
   const opts = currentOpts();
   const btn = $('applyAiConfigBtn'), txt = btn.querySelector('.btn-text'), sp = btn.querySelector('.spinner');
   txt.style.display = 'none'; sp.style.display = 'block'; btn.disabled = true;
-  $('ai-progress-container').classList.remove('hide'); logBox.innerHTML = '';
-  const t0 = performance.now();
+  let t0;
+  progStart(t0 = performance.now());
 
   try {
     /* 재작성 가능 여부 — 서버도 키도 없으면 선별만 수행한다 (체크박스 UI 없이 자동 판단) */
@@ -1748,34 +1785,22 @@ $('applyAiConfigBtn').addEventListener('click', async () => {
     /* ②-A 공용 서버가 있으면 서버가 생성하고 그 자리에서 공용 목록에 등록한다.
            접속자는 아무것도 보낼 필요가 없고, API 키도 서버에만 있다. */
     if (SERVER && !SERVER_DOWN) {
-      glog(`⚡ 공용 서버에 생성 요청 — 132문항을 나눠 동시 처리 (보통 30~90초, 한도 대기 시 최대 3분) · 판 ${BUILD}`);
       const tServer = performance.now();
-      $('progress-label-main').textContent = '공용 서버에서 생성 중…';
-      const tick = setInterval(() => {
-        const s = ((performance.now() - t0) / 1000).toFixed(0);
-        $('progress-bar-main').style.width = Math.min(95, s * 2.5) + '%';
-        $('progress-label-main').textContent = `공용 서버에서 생성 중… ${s}초`;
-      }, 500);
       try {
         let r = await api({ action: 'generate', industry, jobType, managerIds, workerIds,
                             aiSelect: true, force: false, allowFallback: false });
-        /* ★ 기본 모델(gemini-3)을 지금 쓸 수 없는 경우(소진·지속 한도) — 자동으로 내려가지 않고 사용자에게 묻는다 */
+        /* ★ 기본 모델(gemini-3)을 지금 쓸 수 없는 경우(소진·지속 한도) — 자동으로 내려가지 않고 별도 창으로 묻는다 */
         if (r && r.needFallback) {
-          glog(`<s>⚠</s> ${esc(r.error || '기본 모델(Gemini 3)을 지금 사용할 수 없습니다')}`);
-          if (confirm(FALLBACK_ASK)) {
-            glog('<s>⚠</s> 사용자 동의 — <b>하위 모델</b>로 생성합니다 (문장 품질이 다소 떨어질 수 있습니다)');
-            r = await api({ action: 'generate', industry, jobType, managerIds, workerIds,
-                            aiSelect: true, force: false, allowFallback: true });
-          } else {
-            clearInterval(tick);
-            throw Object.assign(new Error('기본 모델을 지금 쓸 수 없음 — 사용자가 하위 모델 생성을 원하지 않아 취소했습니다'), { userCancelled: true });
-          }
+          progStop();
+          const yes = await askFallback();
+          if (!yes) throw Object.assign(new Error('생성 취소'), { userCancelled: true });
+          progStart(t0);
+          r = await api({ action: 'generate', industry, jobType, managerIds, workerIds,
+                          aiSelect: true, force: false, allowFallback: true });
         }
-        clearInterval(tick);
-        if (r && r.quotaExhausted) { clearInterval(tick); throw Object.assign(new Error(r.error), { quotaExhausted: true }); }
-        if (r && r.rpmLimited)     { clearInterval(tick); throw Object.assign(new Error(r.error), { rpmLimited: true }); }
+        if (r && r.quotaExhausted) throw Object.assign(new Error(r.error), { quotaExhausted: true });
+        if (r && r.rpmLimited)     throw Object.assign(new Error(r.error), { rpmLimited: true });
         if (!r || !r.ok) throw new Error((r && r.error) || '서버 생성 실패');
-        $('progress-bar-main').style.width = '100%';
         const chg = (r.changed === undefined) ? r.rewritten : r.changed;
         if (r.elapsed) {                                   // 서버가 보고한 실제 소요 시간
           const rd = (r.rounds || []).map(x => `${x.n}건/${x.model.replace('gemini-', '')} ${x.secs}초`).join(' → ');
@@ -1798,15 +1823,9 @@ $('applyAiConfigBtn').addEventListener('click', async () => {
         finish(r.expert, r.managerIds, r.workerIds, r.industry, r.jobType, t0, r.cached ? '공용' : 'server', r.selection);
         return;
       } catch (e) {
-        clearInterval(tick);
         /* 사용자가 하위 모델 생성을 거절 — 폴백 없이 여기서 끝낸다 */
         if (e.userCancelled) {
-          glog(`<s>✖</s> ${esc(e.message)}`);
-          $('ai-error-message').innerHTML =
-            '기본 모델(Gemini 3)을 지금 쓸 수 없어 생성을 취소했습니다.<br>'
-            + '<span class="mini">· 요청 한도라면 잠시 뒤, 할당량 소진이라면 내일(태평양시 기준 자정) 이후 다시 시도하세요 '
-            + '· 급하면 Google AI Studio에서 결제를 연결해 유료 등급으로 올리세요 '
-            + '· 다시 「생성하기」를 누르면 하위 모델 사용 여부를 다시 물어봅니다.</span>';
+          $('ai-error-message').textContent = '생성을 취소했습니다.';
           throw new Error('생성 취소');
         }
         /* 서버 키 문제라면 이 세션에서는 다시 시도하지 않는다 — 매번 수십 초를 버리게 된다 */
@@ -1857,8 +1876,7 @@ $('applyAiConfigBtn').addEventListener('click', async () => {
     });
     let done = 0;
     const total = chunks.length;
-    const bump = () => { $('progress-bar-main').style.width = Math.round(++done / total * 100) + '%';
-                         $('progress-label-main').textContent = `문항 재작성 ${done}/${total} 묶음 완료`; };
+    const bump = () => { done++; };   // 진행 표시는 progStart 의 경과 시간 타이머가 담당한다
     resetModelChain();
     const maxN = Math.max(...chunks.map(c => c.checkpoints.length));
     glog(`⚡ 132문항을 ${total}묶음(최대 ${maxN}문항)으로 나눠 동시 재작성 — ${modelNow()}`);
@@ -1895,10 +1913,11 @@ $('applyAiConfigBtn').addEventListener('click', async () => {
        조용히 원문으로 끝내지 않고, 반드시 하위 모델 사용 여부를 사용자에게 묻는다 */
     const blockedByQuota = results.some(r => r.exhausted) || failed.some(r => r.q429);
     if (failed.length && blockedByQuota && !ALLOW_FALLBACK) {
-      glog('<s>⚠</s> 기본 모델(Gemini 3)을 지금 사용할 수 없습니다 (할당량 소진 또는 지속적 한도)');
-      if (confirm(FALLBACK_ASK)) {
+      progStop();
+      const yes = await askFallback();
+      progStart(t0);
+      if (yes) {
         ALLOW_FALLBACK = true; MODEL_IDX = Math.max(MODEL_IDX, 1);
-        glog(`<s>⚠</s> 사용자 동의 — <b>${modelNow()}</b>(하위 모델)로 남은 ${failed.length}묶음을 생성합니다 (품질이 다소 떨어질 수 있습니다)`);
         await sleep(800);
         done = Math.max(0, done - failed.length);
         const again = await runLimited(failed.map(r => () => attempt(r.group)), 2);
@@ -1939,13 +1958,40 @@ $('applyAiConfigBtn').addEventListener('click', async () => {
     else glog(`<s>⚠</s> 병합 완료 — 재작성 <b>${rewritten}</b>/132, <b>원문 그대로 남은 문항 ${132 - rewritten}개</b>. `
               + '남은 문항은 다음 생성 때 자동으로 채워집니다.');
 
-    saveIfShared(key, { industry, jobType, expert: flat, managerIds, workerIds, selection }, false);
+    /* ★ 브라우저에서 생성한 결과도 공용 서버(DB)에 등록한다.
+       이전에는 브라우저 생성분이 어디에도 저장되지 않아, 파일은 만들어졌는데
+       공용 목록에는 없는 문제가 있었다. 재작성이 60% 이상 된 경우에만 올린다. */
+    const recOut = { industry, jobType, expert: flat, managerIds, workerIds, selection };
+    if (SERVER && rewritten >= Math.ceil(132 * 0.6)) {
+      try {
+        const rr = await api({ action: 'register', ...recOut }, 60000);
+        if (rr && rr.ok && !rr.existed) {
+          glog('<b>✔</b> 공용 목록에 등록됨 — 다음 이용자부터 즉시 사용');
+          CATALOG.push({ i: industry, j: jobType, f: rr.f, k: rr.k, d: rr.created, s: 'client' });
+          saveCache(key, recOut);
+        } else if (rr && rr.existed) {
+          glog('ⓘ 같은 업종·직종이 이미 공용 목록에 있어 기존 자료를 유지합니다');
+          saveCache(key, recOut);
+        } else {
+          glog(`<s>⚠</s> 공용 등록 실패(${esc((rr && rr.error) || '알 수 없음')}) — 이 브라우저에서만 임시 사용됩니다`);
+          saveCache(key, recOut);
+        }
+      } catch (e2) {
+        glog(`<s>⚠</s> 공용 등록 실패(${esc(e2.message)}) — 이 브라우저에서만 임시 사용됩니다`);
+        saveCache(key, recOut);
+      }
+    } else {
+      saveIfShared(key, recOut, false);
+    }
     finish(flat, managerIds, workerIds, industry, jobType, t0, false, selection);
 
   } catch (err) {
     console.error(err);
-    $('ai-error-message').textContent = '오류: ' + err.message;
+    progStop();
+    $('ai-progress-container').classList.add('hide');
+    if (!$('ai-error-message').textContent) $('ai-error-message').textContent = '오류: ' + err.message;
   } finally {
+    progStop();
     txt.style.display = 'inline'; sp.style.display = 'none'; btn.disabled = false;
   }
 });
@@ -1959,27 +2005,12 @@ function finish(flat, managerIds, workerIds, industry, jobType, t0, fromCache, s
   loadExpert(flat); S.managerIds = managerIds; S.workerIds = workerIds;
   $('app-title').textContent = `${industry} - ${jobType} 인간공학 체크포인트`;
   fillDatalists(); render();
-  $('ai-loading-message').className = '';
-  $('ai-loading-message').style.color = '#16a34a';
-
-  if (fromCache === 'server') {
-    /* 서버가 만들고 그 자리에서 공용 등록까지 끝낸 경우 — 접속자가 할 일이 없다 */
-    $('ai-loading-message').innerHTML =
-      `✅ 완료 (${secs}초) — 맞춤형 HTML 파일을 내려받았습니다.<br>
-       <span class="mini">이 직종은 <b>공용 목록에 자동 등록</b>되었습니다. 다른 이용자도 지금부터 0.5초 만에 같은 자료를 씁니다. 따로 보내주실 것은 없습니다.</span>`;
-  } else if (fromCache) {
-    /* 이미 공용/보관본에 있던 것 — 제출 요청 불필요 */
-    $('ai-loading-message').innerHTML =
-      `✅ 완료 (${secs}초 · ${fromCache} 자료 · AI 호출 0회) — 맞춤형 HTML 파일을 내려받았습니다.`;
-  } else {
-    /* 공용 서버에 등록되지 않은 결과 — 이 화면에서만 쓰는 임시본이다.
-       서버가 살아 있으면 이 분기로 오지 않는다(서버가 생성과 동시에 등록한다). */
-    $('ai-loading-message').style.color = '#b45309';
-    $('ai-loading-message').innerHTML =
-      `⚠ 완료 (${secs}초) — 맞춤형 HTML 파일을 내려받았습니다.<br>
-       <span class="mini">다만 <b>공용 서버에 등록되지 않았습니다.</b> 지금 화면과 내려받은 파일에서는 정상적으로 쓰실 수 있지만,
-       다른 이용자에게는 보이지 않습니다. 잠시 후 서버가 복구되면 같은 업종·직종으로 한 번 더 생성해 주세요.</span>`;
-  }
+  /* 완료 표시 — 진행바를 채우고 한 줄로 알린다 */
+  progStop(true);
+  $('ai-progress-container').classList.remove('hide');
+  $('progress-label-main').textContent = `✅ 완료 (${secs}초) — 맞춤형 HTML 파일을 내려받았습니다.`;
+  if (!fromCache)
+    $('ai-error-message').textContent = '공용 서버에 등록되지 않아 이 화면에서만 쓰이는 임시본입니다.';
   $('applyAiConfigBtn').style.display = 'none';
   $('cancelAiConfigBtn').textContent = '확인';
   notify(`${industry} / ${jobType} 체크포인트를 ${secs}초 만에 준비했습니다.`);
@@ -2368,8 +2399,6 @@ function exportHtml(payload) {
 
 /* ---------- 12. 부팅 ---------- */
 (function boot() {
-  const bs = $('build-stamp'); if (bs) bs.textContent = BUILD;
-
   syncJobField(); fillDatalists('');           // 입력창 초기 안내 문구
 
   try { const s = localStorage.getItem(CHECK_KEY); if (s) JSON.parse(s).forEach(id => S.checked.add(id)); } catch (e) {}
