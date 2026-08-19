@@ -2285,19 +2285,22 @@ $('cache-search-input').addEventListener('input', loadCacheList);
 const ADMIN_CFG = 'ergAdminCfg';
 const ADMIN_HANDOFF = 'ergAdminHandoff';
 try { localStorage.removeItem(ADMIN_CFG); } catch (e) {}   // 과거 버전이 남긴 토큰 청소
-function openAdminGate() {
+async function openAdminGate() {
+  /* ★ 관문은 차단하지 않는다 — 서버 연결 상태와 무관하게 토큰 입력은 항상 가능하다.
+     연결 확인·재시도는 admin.html 안의 「연결 확인」이 담당한다. 여기서는
+     이동 전에 토큰을 미리 검증해 줄 수 있으면 해 주고, 검증 자체가 불가능하면
+     (서버 일시 장애 등) 막지 않고 관리자 화면으로 보낸다. */
   $('admin-token-input').value = '';
   const msg = $('admin-gate-msg');
-  msg.textContent = ''; msg.style.color = '#6b7280';
-  const ok = !!(SERVER && CONFIG.API_URL);
-  $('adminGateOk').disabled = !ok;
-  $('admin-token-input').disabled = !ok;
-  if (!ok) {
-    msg.style.color = '#b45309';
-    msg.textContent = '공용 서버에 연결되어 있지 않아 관리자 모드를 쓸 수 없습니다.';
-  }
+  msg.style.color = '#6b7280';
+  $('adminGateOk').disabled = false;
+  $('admin-token-input').disabled = false;
+  msg.textContent = (SERVER && CONFIG.API_URL) ? ''
+    : '서버 연결이 아직 확인되지 않았습니다 — 이동하면 관리자 화면에서 연결 확인을 다시 시도합니다.';
   show('adminGateModal');
-  if (ok) setTimeout(() => $('admin-token-input').focus(), 50);
+  setTimeout(() => $('admin-token-input').focus(), 50);
+  /* 배경에서 조용히 한 번 재확인해 두면 아래 enterAdmin 의 사전 검증 성공률이 높아진다 */
+  if (!SERVER && CONFIG.API_URL) { try { await loadCatalog(); if (SERVER) msg.textContent = ''; } catch (e) {} }
 }
 async function enterAdmin() {
   const tok = $('admin-token-input').value.trim();
@@ -2305,17 +2308,26 @@ async function enterAdmin() {
   if (!tok) { msg.style.color = '#b45309'; msg.textContent = '토큰을 입력해 주세요.'; return; }
   $('adminGateOk').disabled = true;
   msg.style.color = '#6b7280'; msg.textContent = '확인 중…';
-  try {
-    const r = await api({ action: 'admin', op: 'list', token: tok }, 20000);
-    if (!r || !r.ok) throw new Error((r && r.error) || '인증에 실패했습니다');
+  const go = note => {
     /* 1회용 인계 — admin.html 이 첫 로드에서 읽고 즉시 지운다. 어디에도 영구 저장하지 않는다. */
     try { sessionStorage.setItem(ADMIN_HANDOFF, JSON.stringify({ api: CONFIG.API_URL, atoken: tok })); } catch (e) {}
-    msg.style.color = '#16a34a'; msg.textContent = '✔ 확인되었습니다. 관리자 화면으로 이동합니다…';
-    setTimeout(() => { location.href = 'admin.html'; }, 400);
-  } catch (e) {
-    msg.style.color = '#dc2626'; msg.textContent = '✖ ' + e.message;
+    msg.style.color = note ? '#b45309' : '#16a34a';
+    msg.textContent = note || '✔ 확인되었습니다. 관리자 화면으로 이동합니다…';
+    setTimeout(() => { location.href = 'admin.html'; }, note ? 900 : 400);
+  };
+  let r = null, reachable = true, netErr = '';
+  try { r = await api({ action: 'admin', op: 'list', token: tok }, 20000); }
+  catch (e) { reachable = false; netErr = e.message; }
+  if (r && r.ok) { go(); return; }                      // 서버 정상 + 토큰 일치 → 이동
+  if (r && !r.ok) {                                     // 서버는 응답했고 토큰이 틀림 → 여기서만 막는다
+    msg.style.color = '#dc2626';
+    msg.textContent = '✖ ' + ((r && r.error) || '인증에 실패했습니다 — 토큰을 확인해 주세요.');
     $('adminGateOk').disabled = false;
+    return;
   }
+  /* 서버 확인 자체가 불가(404·시간 초과·네트워크) — 차단하지 않고 이동시킨다.
+     admin.html 이 인계값으로 「연결 확인」을 다시 시도하고, 토큰이 틀렸다면 그 화면에서 알려준다. */
+  go('⚠ 지금은 서버 확인이 되지 않습니다(' + netErr + '). 관리자 화면으로 이동합니다 — 그 안에서 「연결 확인」을 다시 눌러 주세요.');
 }
 menu('admin-gate-btn', openAdminGate);
 $('adminGateOk').addEventListener('click', enterAdmin);
