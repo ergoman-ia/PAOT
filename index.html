@@ -600,10 +600,6 @@ details.adv summary{cursor:pointer;font-size:.88rem;color:#4b5563;font-weight:60
       <input type="search" id="search-input" placeholder="🔍 체크포인트 검색 (예: 통로, 소음, 조명)" style="flex:0 1 320px;width:320px;max-width:320px">
     </div>
 
-    <!-- 응답 기호 안내 — 모든 화면(전문가·관리자·작업자·픽토그램) 공통 -->
-    <div id="ans-legend" class="no-print" style="margin:8px 0 2px;font-size:.88rem;color:#374151;border:1px solid #d1d5db;border-radius:8px;padding:6px 12px;display:inline-block">
-      응답: <b style="color:#16a34a">○ 잘하고 있음</b> &nbsp;·&nbsp; <b style="color:#d97706">△ 고쳐야 함</b> &nbsp;·&nbsp; <b style="color:#dc2626">✕ 해당 없음</b>
-    </div>
     <div id="category-buttons"></div>
   </nav>
 
@@ -615,10 +611,14 @@ details.adv summary{cursor:pointer;font-size:.88rem;color:#4b5563;font-weight:60
         <span class="mini" id="pc-count"></span>
         <span style="flex:1"></span>
         <!-- 항목 관리(임의 재선정) 기능은 없앴다 — 픽토그램 20은 업종·직종에 따라 자동 선정되며,
-             작업자용 20과 항상 같은 항목·같은 내용이어야 하기 때문. 접속자는 언어만 고른다. -->
+             작업자용 20과 항상 같은 항목·같은 내용이어야 하기 때문. 접속자는 언어만 고른다.
+             응답 지우기·인쇄 버튼도 없앴다 — ⋮ 메뉴의 「응답 전체 해제」와
+             「체크포인트(인쇄용) 생성 → 작업자용 픽토그램」과 중복이었다. -->
         <button id="pictoLangBtn" class="btn btn-secondary" style="padding:5px 12px;font-size:.85rem">🌐 표시 언어</button>
-        <button id="pictoResetBtn" class="btn btn-secondary" style="padding:5px 12px;font-size:.85rem">응답 지우기</button>
-        <button id="pictoPrintBtn" class="btn btn-primary" style="padding:5px 12px;font-size:.85rem">🖨 인쇄</button>
+      </div>
+      <!-- 응답 기호 안내 — 픽토그램 화면은 오른쪽 정렬 -->
+      <div class="no-print" style="text-align:right;font-size:.85rem;color:#374151;margin:2px 0 8px">
+        응답: <b style="color:#16a34a">○ 잘하고 있음</b> &nbsp;·&nbsp; <b style="color:#d97706">△ 고쳐야 함</b> &nbsp;·&nbsp; <b style="color:#dc2626">✕ 해당 없음</b>
       </div>
       <div id="picto-list"></div>
       <p id="picto-empty" class="hide" style="text-align:center;color:#6b7280;padding:40px 0">표시할 픽토그램 항목이 없습니다.</p>
@@ -1389,7 +1389,13 @@ function render() {
     shown += list.length;
     const cid = 'cat-' + CATS.indexOf(cat);
     nav += `<a href="#${cid}" >${esc(cat)} (${list.length})</a>`;
-    html += `<tr><td colspan="4" id="${cid}" class="category-header">${esc(cat)} <span style="font-weight:400;font-size:.85rem">(${list.length}항목)</span></td></tr>`;
+    /* 범주 제목은 왼쪽, 응답 기호 안내는 같은 칸의 오른쪽에 배치한다 */
+    html += `<tr><td colspan="4" id="${cid}" class="category-header">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+        <span>${esc(cat)} <span style="font-weight:400;font-size:.85rem">(${list.length}항목)</span></span>
+        <span style="font-weight:400;font-size:.8rem;white-space:nowrap">응답:
+          <b style="color:#16a34a">○ 잘하고 있음</b> · <b style="color:#d97706">△ 고쳐야 함</b> · <b style="color:#dc2626">✕ 해당 없음</b></span>
+      </div></td></tr>`;
     html += `<tr class="column-header"><th class="center" style="width:6%">연번</th><th style="width:54%">인간공학 체크포인트</th><th class="center" style="width:18%">구체적인 사항</th><th class="center" style="width:15%">응답</th></tr>`;
     for (const id of list) {
       /* 응답은 픽토그램 카드와 같은 ○△✕ 3단계 — 저장소(S.pictoAns)도 같아서
@@ -1637,14 +1643,9 @@ document.getElementById('picto-list').addEventListener('change', e => {
   const el = document.getElementById('pc-count');
   el.innerHTML = el.innerHTML.replace(/응답 <b>\d+<\/b>건/, `응답 <b>${done}</b>건`);
 });
-document.getElementById('pictoResetBtn').addEventListener('click', () => {
-  const n = S.pictoIds.filter(id => S.pictoAns.has(id)).length;
-  if (!n) { notify('지울 응답이 없습니다.', 'info'); return; }
-  if (!confirm('작업자용(픽토그램) 20개 항목의 응답을 지울까요?\n(전문가·관리자용의 다른 응답은 그대로 둡니다)')) return;
-  /* 작업자용 20 = 픽토그램 20 이므로 이 20개만 지운다 — 두 화면에 함께 반영된다 */
-  S.pictoIds.forEach(id => S.pictoAns.delete(id));
-  persistPicto(); renderPicto(); notify('작업자용 응답을 지웠습니다.', 'info');
-});
+/* (삭제됨) 픽토그램 화면의 「응답 지우기」·「인쇄」 버튼 —
+   ⋮ 메뉴의 「응답 전체 해제」와 「체크포인트(인쇄용) 생성 → 작업자용 픽토그램」이
+   같은 일을 하므로 중복 버튼을 없앴다. printPicto 는 메뉴 쪽에서 계속 쓴다. */
 
 /* ---------- (삭제됨) 항목 관리 ----------
    픽토그램 임의 재선정 기능은 없앴다. 작업자용 20 = 픽토그램 20 은
@@ -1773,7 +1774,6 @@ function printPicto(idsIn) {
   </body></html>`);
   w.document.close(); w.focus(); setTimeout(() => { try { w.print(); } catch (e) {} }, 400);
 }
-document.getElementById('pictoPrintBtn').addEventListener('click', () => printPicto());
 
 /* 옛 「조치여부」(켬/끔) 저장 키 — 이제 응답은 전부 S.pictoAns(○△✕)에 담기므로
    이 키는 부팅 때 한 번 ○ 응답으로 이관하고 지우는 용도로만 남아 있다. */
