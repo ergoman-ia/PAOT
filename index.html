@@ -687,18 +687,21 @@ details.adv summary{cursor:pointer;font-size:.88rem;color:#4b5563;font-weight:60
         언어를 고르면 즉시 표시되고 다른 언어로 바꾸면 바로 바뀝니다 — 미리 번역된 내장 번역표를 쓰므로 기다림이 없습니다.</li>
       <li style="margin-bottom:8px"><b>🖨 인쇄</b> — 그림 + 여러 나라 말 + ○△✕ 칸이 있는 카드형 점검표로 인쇄합니다.
         「체크포인트(인쇄용) 생성」 메뉴에서도 같은 인쇄물을 뽑을 수 있습니다.</li>
-      <li style="margin-bottom:8px" class="ai-only"><b>언어 고르기</b> — 「맞춤 업종·직종별 체크포인트 생성」 창의
-        <b>🌐 외국인 노동자용 체크리스트 언어</b>에서 고용허가제 송출국 16개 언어를 <b>여러 개</b> 고를 수 있습니다.
-        언어 표시는 미리 번역된 내장 번역표를 쓰므로 AI를 부르지 않고 즉시 나옵니다.
-        고른 언어만 내보낸 파일에 담기므로 현장에 있는 나라 말만 고르면 파일이 가볍습니다.</li>
+      <li style="margin-bottom:8px"><b>언어 고르기</b> — 고용허가제 송출국 16개 언어가 앱에 모두 내장되어 있고,
+        화면 오른쪽 위 <b>🌐 표시 언어</b>에서 필요한 나라 말을 <b>여러 개</b> 고르면 카드와 인쇄물에 함께 나옵니다.
+        AI를 부르지 않고 내장 번역표를 쓰므로 즉시 표시되며, 내보낸 파일에도 16개 언어가 모두 실려 있어
+        파일을 받은 현장에서 다시 고르기만 하면 됩니다.</li>
     </ul>
     <h4 style="margin-top:18px;color:#1e3a8a">4. 관리자용·작업자용은 어떻게 뽑히나요?</h4>
     <p class="mini" style="margin-bottom:6px"><b>관리자용 54개</b> — 기존 20개 직종의 검증된 선별 결과를 통계로 학습한 내장 우선순위표와
       업종·직종 키워드 가중치로 계산하고, 맞춤 생성 때는 AI가 그 직종의 작업 특성을 보고 다시 고릅니다.</p>
-    <p class="mini"><b>작업자용 20개</b> — <b>AI를 부르지 않고 코드가 정합니다.</b> 위 85개 픽토그램 항목 안에서
+    <p class="mini"><b>작업자용 20개</b> — <b>그림이 있는 85개 항목 안에서 AI가 이 직종에 맞는 20개를 고릅니다.</b>
+      「계측기·서류 없이 눈으로 확인할 수 있을 것 / 회사 제도가 아니라 내 작업에 관한 것일 것 /
+      아니오일 때 스스로 고치거나 멈추거나 알리는 행동으로 이어질 것」을 기준으로 삼습니다.
+      AI가 그림 없는 번호를 고르거나 개수를 덜 채우면 그만큼은 코드 선별로 자동 보충되고,
+      AI를 쓸 수 없을 때(키 없음·생성 실패)는 코드 선별이 20개를 전부 만듭니다 —
       ① 항목별 기본 중요도 ② 업종·직종 이름에 걸리는 규칙(예: 지게차·택배 → 운전석·안전거리, 조리·급식 → 미끄럼·고열·손씻기,
-      용접 → 국소배기·보호구) ③ 범주 키워드 가중치 ④ 검증된 우선순위표를 합산해 점수가 높은 순으로 뽑되,
-      한 범주에 몰리지 않도록 범주별 상한을 둡니다. 같은 업종·직종이면 언제나 같은 20개가 나옵니다.</p>
+      용접 → 국소배기·보호구) ③ 범주 키워드 가중치 ④ 검증된 우선순위표를 합산해 뽑습니다.</p>
   </div>
   <div class="modal-footer"><button id="okManualModal" class="btn btn-primary">확인</button></div>
 </div></div>
@@ -727,25 +730,10 @@ details.adv summary{cursor:pointer;font-size:.88rem;color:#4b5563;font-weight:60
     </div>
   </div>
   <div class="modal-body">
-    <details id="lang-details" style="border:1px solid #e5e7eb;border-radius:8px;padding:10px 12px;background:#fff">
-      <summary style="cursor:pointer;font-weight:600;color:#1e3a8a;font-size:.95rem;padding:2px 0">
-        🌐 외국인 노동자용 체크리스트 언어 <span class="mini" id="lang-summary" style="font-weight:400;color:#6b7280"></span>
-      </summary>
-      <p class="mini" style="margin:6px 0 2px;color:#475569">
-        한국어·영어는 항상 들어갑니다. 현장에 있는 외국인 근로자의 언어를 <b>여러 개</b> 고르면
-        외국인 노동자용 카드에 함께 인쇄됩니다. (고용허가제 송출국 16개 언어)<br>
-        고른 언어는 <b>이 업종·직종의 표현으로 다시 쓴 문구를 그대로 번역</b>합니다.
-        (예: “물건” → “철근다발”, “공구” → “그라인더”)<br>
-        만들어 둔 언어는 다시 번역하지 않습니다. 번역에 실패하거나 AI를 쓸 수 없으면
-        <b>앱에 내장된 16개 언어 기본 번역</b>이 대신 나오므로 칸이 비지 않습니다.
-      </p>
-      <div class="lang-grid" id="lang-grid"></div>
-      <div style="display:flex;gap:8px;margin-top:8px">
-        <button type="button" id="langNone" class="btn btn-secondary" style="padding:4px 10px;font-size:.8rem">모두 해제</button>
-        <span class="mini" id="lang-cost" style="align-self:center;color:#92400e"></span>
-      </div>
-      <div class="mini" id="lang-note" style="margin-top:6px;color:#b45309"></div>
-    </details>
+    <!-- (삭제됨) 「외국인 노동자용 체크리스트 언어」 선택 —
+         외국어는 AI 번역이 아니라 앱에 내장된 16개 언어 번역표를 그대로 쓰므로
+         생성할 때 언어를 고를 이유가 없다. 내보낸 파일에는 16개 언어가 모두 실리고,
+         무엇을 보여줄지는 파일을 여는 사람이 「🌐 표시 언어」에서 고른다. -->
     <div id="shared-status" class="hide"></div>
 
     <div id="preview-box" class="hide" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px">
@@ -1732,29 +1720,9 @@ $('okPictoLangModal').addEventListener('click', closePictoLang);
 $('closePictoLangModal').addEventListener('click', closePictoLang);
 $('pictoLangModal').addEventListener('click', e => { if (e.target === $('pictoLangModal')) closePictoLang(); });
 
-/* ---------- 언어 선택 (생성 모달) ---------- */
-function buildGenLangGrid() {
-  $('lang-grid').innerHTML =
-    `<label class="fixed"><input type="checkbox" checked disabled><span class="nm">한국어 (기본)</span></label>
-     <label class="fixed"><input type="checkbox" checked disabled><span class="nm">English (기본)</span></label>`
-    + LANGS.map(l => `<label><input type="checkbox" class="gl-chk" data-c="${l.c}"${S.langs.includes(l.c) ? ' checked' : ''}>
-        <span class="nm" title="${esc(l.n)}">${esc(l.ko)}</span></label>`).join('');
-  updateLangSummary();
-}
-function updateLangSummary() {
-  const n = S.langs.length;
-  $('lang-summary').textContent = n ? `— 한국어·영어 + ${n}개 언어` : '— 한국어·영어만';
-  $('lang-cost').innerHTML =
-    `언어 표시는 <b>미리 번역된 내장 번역표</b>를 씁니다 — AI를 쓰지 않아 생성 시간이 늘지 않습니다.${n ? ` 여기서 고른 ${n}개 언어는 처음부터 카드에 표시되고, 내보낸 파일에도 담깁니다.` : ''}`;
-}
-$('lang-grid').addEventListener('change', e => {
-  const c = e.target.closest('.gl-chk'); if (!c) return;
-  const code = c.dataset.c;
-  S.langs = c.checked ? [...new Set([...S.langs, code])] : S.langs.filter(x => x !== code);
-  S.langs = LANGS.map(l => l.c).filter(x => S.langs.includes(x));
-  persistLangs(); updateLangSummary();
-});
-$('langNone').addEventListener('click', () => { S.langs = []; persistLangs(); buildGenLangGrid(); });
+/* (삭제됨) 생성 모달의 언어 선택 —
+   외국어 표시는 내장 번역표(16개 언어)로만 이루어지므로 생성 단계에서 고를 것이 없다.
+   표시 언어는 화면의 「🌐 표시 언어」에서만 고른다. */
 
 /* ---------- 인쇄 ---------- */
 const PICTO_PRINT_CSS = `
@@ -2049,6 +2017,10 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
    앞 모델의 할당량이 소진되거나(429) 과부하(503)면 기다리지 않고 곧바로 아래 모델로 내려간다.
    기다리면 전체 생성이 몇 분씩 늘어나므로, 조금 가벼운 모델로 즉시 이어가는 편이 낫다.
    한 번 내려가면 그 생성이 끝날 때까지 아래 모델을 쓴다(같은 벽에 9번 부딪히지 않도록). */
+/* ★ 「생성 성공」의 기준 — 132문항이 모두 재작성되고, 항목 선정(AI)까지 끝나야 한다.
+   둘 중 하나라도 못 끝내면 중간 결과가 있어도 저장하지 않고 파일도 만들지 않는다.
+   (기준을 낮추려면 이 숫자만 바꾸면 된다. 예: 132 → 126 이면 6문항까지 원문 허용) */
+const REWRITE_REQUIRED = 132;
 const MODEL_CHAIN = ['gemini-3-flash-preview', 'gemini-2.5-flash', 'gemini-2.5-flash-lite'];
 let MODEL_IDX = 0;
 let SERVER_DOWN = false;   // 서버 키 문제를 확인하면 이 세션에서는 서버 호출을 건너뛴다
@@ -2204,17 +2176,22 @@ async function ensureWorkerText(rec, industry, jobType, t0) {
   return rec.wtext || {};
 }
 
-/* 선택 사항: 선별을 AI에게 재확인 — ID만 주고받으므로 문장 변형 불가 */
-/* ── 관리자용·작업자용 항목 선정 (AI 우선순위 판단) ──
+/* ── 관리자용·작업자용 항목 선정 (AI 우선순위 판단) — ID만 주고받으므로 문장 변형 불가 ──
    같은 132개 문항이라도 업종·직종에 따라 중요한 항목이 다르다.
    예) 용접공은 유해요인관리·시설 및 보호구, 급식조리원은 재료보관 및 취급·작업장 환경,
        택배원은 재료보관 및 취급·작업조직의 비중이 커야 한다.
    그래서 AI에게 (1) 그 직종의 주요 신체부담·유해요인을 먼저 판단하게 하고,
    (2) 그 판단에 근거해 항목을 고르게 한 뒤, (3) 왜 그렇게 골랐는지를 함께 받는다.
    문장은 바꾸지 않고 번호(id)만 받으므로 원문 훼손 위험이 없다. */
-async function aiRefineSelection(industry, jobType, mTot) {
+async function aiRefineSelection(industry, jobType, mTot, wTot) {
   const brief = BASE.map(g =>
     `[${g.category}] ` + g.checkpoints.map(c => c.id + '=' + c.text).join(' | ')).join('\n');
+  /* 작업자용 후보 — 그림(픽토그램)이 있는 85개만 목록으로 준다.
+     그림 없는 문항이 뽑히면 카드에 빈칸이 생기므로 후보 자체를 이 85개로 못박는다. */
+  const wPool = {};
+  WP_IDS.forEach(id => { const c = CAT_OF[id]; (wPool[c] = wPool[c] || []).push(id); });
+  const wBrief = CATS.filter(c => wPool[c]).map(c =>
+    `[${c}] ` + wPool[c].map(id => id + '=' + (WP.get(id) || {}).ko).join(' | ')).join('\n');
 
   const sys = `당신은 산업안전보건 현장을 오래 다닌 인간공학 전문가입니다.
 대상: 업종 "${industry}" / 직종 "${jobType}"
@@ -2231,7 +2208,14 @@ async function aiRefineSelection(industry, jobType, mTot) {
 · manager(관리자용) ${mTot}개 — 사업주·관리감독자가 설비 개선, 작업설계, 예산, 작업조직 변경으로 조치해야 할 항목.
   9개 범주 중 이 직종과 무관한 범주는 최소한만 넣고, 핵심 범주에 집중 배분하십시오.
   다만 어떤 범주도 완전히 0이 되지 않도록 각 범주에서 최소 1개는 포함합니다.
-· 작업자용 목록은 이 앱이 따로 계산하므로 요청하지 않습니다. manager 만 고르십시오.
+· worker(작업자용) ${wTot}개 — 아래 「작업자용 후보 목록」의 번호 중에서만 고릅니다.
+  현장에서 일하는 사람(외국인 노동자 포함)이 그림 카드를 보고 ○/△/✕로 답할 항목이므로 다음을 지키십시오.
+  ① 계측기·서류 없이 그 자리에서 눈으로 보고 판단할 수 있을 것
+  ② 회사 제도·예산이 아니라 본인의 작업과 주변에 관한 것일 것
+  ③ “아니오”일 때 스스로 고치거나·멈추거나·즉시 알리는 행동으로 이어질 것
+  ④ 이 직종이 실제로 하지 않는 작업(예: 사무직의 지게차·용접)은 넣지 말 것
+  ⑤ 한 범주에 몰리지 않게 이 직종의 핵심 범주를 중심으로 3~4개 범주 이상에 걸치게 할 것
+· manager 와 worker 는 서로 겹쳐도 됩니다 — 보는 사람과 조치 주체가 다르기 때문입니다.
 · 중요도 높은 순으로 정렬해 반환하십시오.
 
 ■ 3단계 — 근거 작성
@@ -2239,9 +2223,13 @@ focus: 이 직종에서 비중을 높인 범주명 2~4개 (아래 목록의 이�
 reason: 왜 그 범주를 중시했는지 한국어 2문장 이내. 직종의 구체적 작업을 언급할 것.
 범주 목록: ${PRI.cats.join(', ')}
 
+■ 작업자용 후보 목록 (worker 는 반드시 이 번호 안에서만 고를 것)
+${wBrief}
+
 ■ 출력 규칙
 - 번호(id)만 반환하고 체크포인트 문장은 절대 다시 쓰지 않습니다.
-- id는 1~132 범위의 정수이며 중복 없이 반환합니다.`;
+- id는 1~132 범위의 정수이며 중복 없이 반환합니다.
+- manager 는 ${mTot}개, worker 는 ${wTot}개를 정확히 채웁니다.`;
 
   const out = await callGemini({
     contents: [{ parts: [{ text: brief }] }],
@@ -2253,9 +2241,10 @@ reason: 왜 그 범주를 중시했는지 한국어 2문장 이내. 직종의 �
         properties: {
           focus:   { type: 'ARRAY', items: { type: 'STRING' } },
           reason:  { type: 'STRING' },
-          manager: { type: 'ARRAY', items: { type: 'NUMBER' } }
+          manager: { type: 'ARRAY', items: { type: 'NUMBER' } },
+          worker:  { type: 'ARRAY', items: { type: 'NUMBER' } }
         },
-        required: ['manager']
+        required: ['manager', 'worker']
       }
     }
   }, 2);
@@ -2278,9 +2267,18 @@ reason: 왜 그 범주를 중시했는지 한국어 2문장 이내. 직종의 �
   };
 
   const managerIds = coverAll(clean(out.manager, mTot, S.managerIds));
+  /* 작업자용 — ① 그림 있는 85개 밖의 번호는 버리고 ② 모자란 만큼은 코드 선별로 채운다.
+     AI가 엉뚱한 번호를 주거나 개수를 덜 채워도 카드가 비지 않게 하기 위한 이중 안전장치다. */
+  const wN = wTot || WP_TARGET;
+  const wFallback = selectWorkerPicto(industry, jobType, wN);
+  const wSeen = new Set();
+  const wPicked = (out.worker || [])
+    .filter(x => Number.isInteger(x) && WP.has(x) && !wSeen.has(x) && wSeen.add(x));
+  for (const f of wFallback) { if (wPicked.length >= wN) break; if (!wSeen.has(f)) { wPicked.push(f); wSeen.add(f); } }
+  const workerIds = wPicked.slice(0, wN).sort((a, b) => a - b);
   const validCats = new Set(PRI.cats);
   return {
-    managerIds,
+    managerIds, workerIds, workerByAi: workerIds.filter(id => (out.worker || []).includes(id)).length,
     focus: (out.focus || []).filter(c => validCats.has(c)).slice(0, 4),
     reason: String(out.reason || '').slice(0, 300)
   };
@@ -2360,12 +2358,6 @@ function openAiModal() {
   $('cancelAiConfigBtn').textContent = '닫기';
   if (!(SERVER || AI_READY))
     $('ai-error-message').textContent = '공용 서버와 API 키가 모두 없어 문항 재작성 없이 선별만 수행합니다.';
-  buildGenLangGrid();
-  /* 번역은 브라우저에서 직접 수행한다 — 공용 서버는 132문항 재작성만 담당하기 때문이다.
-     키가 없으면 고른 언어가 채워지지 않으므로 그 사실을 미리 알린다. */
-  $('lang-note').innerHTML = AI_READY ? ''
-    : 'ⓘ 이 파일에는 번역용 AI 키가 없습니다. 고른 언어는 <b>앱에 내장된 기본 번역</b>으로 나옵니다 — '
-      + '뜻은 정확하지만 업종·직종 용어까지 반영되지는 않습니다.';
   fillDatalists(''); syncJobField(); previewSelection();
   show('aiConfigModal');
 }
@@ -2631,16 +2623,19 @@ $('applyAiConfigBtn').addEventListener('click', async () => {
     /* ① 선별 — 즉시(코드). AI 재작성과 무관하게 항상 먼저 확정된다. */
     const sel = selectIds(PRI, industry, jobType, opts);
     let managerIds = sel.managerIds;
-    /* ★ 작업자용은 AI를 부르지 않는다 — 그림이 있는 항목 안에서 업종·직종 규칙으로 즉시 고른다 */
-    const workerIds = selectWorkerPicto(industry, jobType, WP_TARGET);
-    glog(`<b>✔</b> 선별 완료 (코드) — 관리자용 ${managerIds.length} / 작업자용 ${workerIds.length}(외국인 노동자용) · ${(performance.now() - t0).toFixed(1)}ms`);
+    /* 작업자용 초안 — 그림이 있는 85개 안에서 업종·직종 규칙으로 즉시 고른다.
+       AI 선별이 성공하면 아래에서 AI가 고른 목록으로 교체된다(실패하면 이 초안을 그대로 쓴다). */
+    let workerIds = selectWorkerPicto(industry, jobType, WP_TARGET);
+    glog(`<b>✔</b> 선별 완료 (코드 초안) — 관리자용 ${managerIds.length} / 작업자용 ${workerIds.length}(외국인 노동자용) · ${(performance.now() - t0).toFixed(1)}ms`);
 
     if (NOREWRITE) {
+      /* 공용 서버도 API 키도 없다 — 132문항 재작성도, AI 항목 선정도 할 수 없다.
+         화면으로 확인하는 것은 되지만 «생성»은 아니므로 파일을 만들지 않는다. */
       const flat = {}; BASE.forEach(g => g.checkpoints.forEach(c => flat[c.id] = { t: c.text, i: c.ideas }));
       const r0 = { industry, jobType, expert: flat, managerIds, workerIds };
       await ensureWorkerText(r0, industry, jobType, t0);
       saveIfShared(key, r0, false);
-      finish(flat, managerIds, workerIds, industry, jobType, t0, SERVER ? false : 'local', null, r0);
+      finish(flat, managerIds, workerIds, industry, jobType, t0, false, null, r0, 'noai');
       return;
     }
 
@@ -2723,15 +2718,69 @@ $('applyAiConfigBtn').addEventListener('click', async () => {
     }
 
     if (!AI_READY) {
+      /* 서버 생성이 실패했고 이 브라우저에는 API 키도 없다 — 재작성·선정을 할 수단이 없다.
+         원문 132개를 화면에는 보여 주되, 파일은 만들지 않는다. */
       const flat = {}; BASE.forEach(g => g.checkpoints.forEach(c => flat[c.id] = { t: c.text, i: c.ideas }));
       const r0 = { industry, jobType, expert: flat, managerIds, workerIds };
       await ensureWorkerText(r0, industry, jobType, t0);
       saveIfShared(key, r0, false);
-      finish(flat, managerIds, workerIds, industry, jobType, t0, SERVER ? false : 'local', null, r0);
+      finish(flat, managerIds, workerIds, industry, jobType, t0, false, null, r0, 'noai');
       return;
     }
 
-    /* ② 재작성 — 전체 소요는 “가장 오래 걸리는 한 건”이 정한다.
+    /* ② 항목 선정 — 재작성보다 «먼저» 끝낸다.
+       ★ 예전에는 선별과 재작성을 동시에 보냈다. 그러면 선별 1건이 재작성 12묶음과 같은
+         분당 한도를 다투다 밀려 실패하기 쉬웠고, 선별이 실패하면 이미 끝낸 재작성 결과까지
+         통째로 버려야 했다(저장 조건이 «둘 다 통과»이므로).
+       → 가벼운 선별을 먼저 확정하고, 실패하면 재작성을 시작하지도 않는다.
+         성공하면 2~4초를 더 쓰지만, 실패할 때 60~100초와 132문항 분의 한도를 아낀다. */
+    resetModelChain();
+    progStart(t0, '항목 선정 중');
+    glog('▶ 항목 선정 요청 — 관리자용 ' + opts.managerTotal + ' / 작업자용 ' + WP_TARGET);
+    const tSel = performance.now();
+    const trySelect = () => aiRefineSelection(industry, jobType, opts.managerTotal, WP_TARGET)
+          .then(r => { glog(`<b>✔</b> 항목 선정 완료 (ID만 수신) · ${((performance.now() - tSel) / 1000).toFixed(1)}초`); return r; })
+          .catch(e => { glog(`<s>✖</s> 항목 선정 실패(${esc(e.message)})`); return { _err: e }; });
+    let aiSel = await trySelect();
+    /* 한도에 막힌 것이라면 여기서 포기하지 않고, 재작성 때와 똑같이 하위 모델 사용 여부를 묻는다.
+       선정이 실패하면 재작성을 아예 시작하지 않으므로, 물어볼 가치가 가장 큰 지점이다. */
+    if (aiSel && aiSel._err) {
+      const e = aiSel._err;
+      const quotaHit = !!e.exhausted || !!e.quota || /HTTP 429|HTTP 503/.test(e.message || '');
+      aiSel = null;
+      if (quotaHit && !ALLOW_FALLBACK) {
+        progStop();
+        const yes = await askFallback();
+        progStart(t0, '항목 선정 중');
+        if (yes) {
+          ALLOW_FALLBACK = true; MODEL_IDX = Math.max(MODEL_IDX, 1);
+          glog(`⏳ 항목 선정을 ${modelNow()}(으)로 다시 시도합니다`);
+          await sleep(800);
+          const again = await trySelect();
+          aiSel = (again && again._err) ? null : again;
+        }
+      }
+    }
+
+    if (!aiSel) {
+      /* 재작성은 시작하지 않는다 — 어차피 저장되지 않을 결과에 한도를 쓰지 않기 위한 것 */
+      glog('<s>⚠</s> 항목 선정에 실패해 재작성을 시작하지 않았습니다 — 저장·파일 생성 없음');
+      const flat0 = {}; BASE.forEach(g => g.checkpoints.forEach(c => flat0[c.id] = { t: c.text, i: c.ideas }));
+      const rSel = { industry, jobType, expert: flat0, managerIds, workerIds };
+      await ensureWorkerText(rSel, industry, jobType, t0);
+      finish(flat0, managerIds, workerIds, industry, jobType, t0, false, null, rSel, 'select');
+      return;
+    }
+    managerIds = aiSel.managerIds;
+    if (aiSel.workerIds && aiSel.workerIds.length) workerIds = aiSel.workerIds;
+    glog(`<b>✔</b> 작업자용 ${workerIds.length}개 — AI 선정 ${aiSel.workerByAi}개 / 코드 보충 ${workerIds.length - aiSel.workerByAi}개`);
+    const selection = { focus: aiSel.focus, reason: aiSel.reason, by: 'ai' };
+    if (aiSel.focus.length) glog(`<b>✔</b> 중점 범주 — ${aiSel.focus.map(esc).join(' · ')}`);
+    if (aiSel.reason) glog(`<span class="mini">${esc(aiSel.reason)}</span>`);
+    showSelectionReason(selection);
+    progStart(t0);
+
+    /* ③ 재작성 — 전체 소요는 “가장 오래 걸리는 한 건”이 정한다.
        범주별 문항 수가 9~27개로 들쭉날쭉해서 작업조직(27문항) 하나가 전체를 붙잡고 있었다.
        그래서 범주를 CHUNK 문항 이하 덩어리로 쪼개 모두 동시에 보낸다. */
     const chunks = [];
@@ -2755,15 +2804,7 @@ $('applyAiConfigBtn').addEventListener('click', async () => {
                     return { category: g.category, map: new Map(), group: g, failed: true,
                              exhausted: !!e.exhausted, q429: /HTTP 429/.test(e.message || '') }; }); };
 
-    /* AI 선별은 항상 재작성과 병렬로 수행한다 (실패 시 코드 선별 유지) */
-    const selJob = aiRefineSelection(industry, jobType, opts.managerTotal)
-          .then(r => { glog('<b>✔</b> AI 선별 확인 완료 (ID만 수신)'); return r; })
-          .catch(() => { glog('<s>✖</s> AI 선별 확인 실패 → 코드 선별 유지'); return null; });
-
-    let [results, aiSel] = await Promise.all([
-      runLimited(chunks.map(g => () => attempt(g)), REWRITE_CONCURRENCY),
-      selJob
-    ]);
+    let results = await runLimited(chunks.map(g => () => attempt(g)), REWRITE_CONCURRENCY);
 
     /* 남은 실패분 재시도 — 한도 초과였다면 아래 모델로 내려간 뒤라 대개 통과한다 */
     let failed = results.filter(r => r.failed);
@@ -2808,15 +2849,6 @@ $('applyAiConfigBtn').addEventListener('click', async () => {
       glog(`<span class="mini">· 재작성 ${((performance.now() - tRewrite) / 1000).toFixed(1)}초 `
          + `(가장 느린 묶음 ${esc(slow.category)} ${slow.secs.toFixed(1)}초 · 평균 ${(times.reduce((a, b) => a + b, 0) / times.length).toFixed(1)}초)</span>`);
     }
-    let selection = null;
-    if (aiSel) {
-      managerIds = aiSel.managerIds;          // 작업자용은 코드 선별을 그대로 둔다
-      selection = { focus: aiSel.focus, reason: aiSel.reason, by: 'ai' };
-      if (aiSel.focus.length) glog(`<b>✔</b> 중점 범주 — ${aiSel.focus.map(esc).join(' · ')}`);
-      if (aiSel.reason) glog(`<span class="mini">${esc(aiSel.reason)}</span>`);
-      showSelectionReason(selection);
-    }
-
     /* 병합 — 실패/누락 항목은 원문 유지 */
     const flat = {}; let rewritten = 0;
     BASE.forEach(g => g.checkpoints.forEach(c => { flat[c.id] = { t: c.text, i: c.ideas }; }));
@@ -2831,9 +2863,14 @@ $('applyAiConfigBtn').addEventListener('click', async () => {
     const recOut = { industry, jobType, expert: flat, managerIds, workerIds, selection };
     /* ③ 작업자용 픽토그램 문구 — 방금 재작성된 132문항을 원문 삼아 현장 표현으로 다시 쓰고, 고른 언어로 옮긴다 */
     await ensureWorkerText(recOut, industry, jobType, t0);
-    /* ★ 파일은 “공용 서버에 등록된 자료”에 대해서만 만든다 — 등록 성공 여부를 여기서 확정한다 */
+    /* ★ 저장·파일 생성의 유일한 조건 — ① 132문항 전부 재작성 ② AI 항목 선정 완료.
+       하나라도 못 끝냈으면 중간 결과가 있어도 버린다. 문장만 바뀌었거나 항목이 규칙 계산인
+       자료가 파일로 나가면, 겉보기에는 정상인데 내용이 반쪽인 체크리스트가 현장에 퍼진다.
+       한도 초과·과부하·연결 실패는 잠시 뒤 풀리므로 다시 시도하게 하는 편이 낫다. */
+    const genOk   = rewritten >= REWRITE_REQUIRED;   // 항목 선정은 위에서 이미 통과한 상태다
+    const failWhy = genOk ? '' : 'rewrite';
     let registered = false;
-    if (SERVER && rewritten >= Math.ceil(132 * 0.6)) {
+    if (SERVER && genOk) {
       try {
         const rr = await api({ action: 'register', ...recOut }, 60000);
         if (rr && rr.ok && !rr.existed) {
@@ -2850,12 +2887,12 @@ $('applyAiConfigBtn').addEventListener('click', async () => {
         glog(`<s>⚠</s> 공용 등록 실패(${esc(e2.message)}) — 파일을 만들지 않습니다`);
       }
     } else if (SERVER) {
-      glog(`<s>⚠</s> 재작성이 ${rewritten}/132 에 그쳐 공용 등록을 보류했습니다 — 파일을 만들지 않습니다`);
+      glog(`<s>⚠</s> 재작성이 ${rewritten}/132 에 그쳐 저장하지 않습니다 — 파일을 만들지 않습니다`);
     }
     if (!registered) saveIfShared(key, recOut, false);
-    /* 서버가 아예 없는 로컬 전용 모드('local')에서는 등록할 곳이 없으므로 파일을 만든다 */
+    /* 서버가 없는 로컬 전용 모드에서도 판정 기준은 같다 — 반쪽짜리 결과는 파일로 만들지 않는다 */
     finish(flat, managerIds, workerIds, industry, jobType, t0,
-           registered ? 'client' : (SERVER ? false : 'local'), selection, recOut);
+           registered ? 'client' : (!SERVER && genOk ? 'local' : false), selection, recOut, failWhy);
 
   } catch (err) {
     console.error(err);
@@ -2870,13 +2907,20 @@ $('applyAiConfigBtn').addEventListener('click', async () => {
 
 /** source: '보관본' | '공용' | 'server' | 'client' | 'local' → 저장된 자료(파일 생성)
  *          false → 공용 서버에 등록되지 않음 (파일을 만들지 않는다) */
-function finish(flat, managerIds, workerIds, industry, jobType, t0, source, selection, extra) {
+function finish(flat, managerIds, workerIds, industry, jobType, t0, source, selection, extra, failReason) {
   const secs = ((performance.now() - t0) / 1000).toFixed(1);
   const x = extra || {};
-  /* ★ 작업자용 20개는 언제나 코드가 정한다 —
-     그림이 있는 항목 중에서만 고르므로, 서버나 옛 자료가 넘겨준 목록을 그대로 쓰면
-     그림 없는 문항이 섞여 픽토그램 체크리스트에 구멍이 난다. */
-  const wIds = selectWorkerPicto(industry, jobType, WP_TARGET);
+  /* ★ 작업자용 20개 — AI(또는 서버·보관본)가 고른 목록을 쓰되, 반드시 그림이 있는 항목만 남긴다.
+     그림 없는 문항이 섞이면 카드에 빈칸이 생기므로 걸러내고, 걸러낸 만큼은 코드 선별로 채운다.
+     넘겨받은 목록이 아예 없으면 전부 코드 선별로 만든다. */
+  const wIds = (() => {
+    const base = selectWorkerPicto(industry, jobType, WP_TARGET);
+    const given = (workerIds || []).filter(id => WP.has(id));
+    if (!given.length) return base;
+    const seen = new Set(given), out = [...given];
+    for (const f of base) { if (out.length >= WP_TARGET) break; if (!seen.has(f)) { out.push(f); seen.add(f); } }
+    return out.slice(0, WP_TARGET).sort((a, b) => a - b);
+  })();
   const rec = { industry, jobType, expert: flat, managerIds, workerIds: wIds, selection: selection || null,
                 wtext: x.wtext || {}, langs: x.langs || [...S.langs],
                 pictoIds: (x.pictoIds && x.pictoIds.length) ? x.pictoIds.filter(id => WP.has(id)) : wIds };
@@ -2907,15 +2951,32 @@ function finish(flat, managerIds, workerIds, industry, jobType, t0, source, sele
     $('cancelAiConfigBtn').textContent = '확인';
   } else {
     $('progress-label-main').textContent = `⚠ 완료 (${secs}초) — 파일을 만들지 않았습니다.`;
-    setGenNote('공용 서버에 등록하지 못했습니다. <b>서버에 저장된 자료만 파일로 만들기 때문에</b> 이번에는 HTML 파일을 내려받지 않았습니다.<br>'
-             + '· 내용은 이 화면에서 그대로 확인할 수 있습니다.<br>'
-             + '· 잠시 뒤 <b>「다시 시도」</b>를 누르면 등록과 함께 파일이 만들어집니다.');
+    /* 실패 사유를 구분해 안내한다 — 「AI 항목 선정 실패」와 「서버 등록 실패」는 대처가 다르다 */
+    const RETRY_TIP = '· 1~2분 뒤 <b>「다시 시도」</b>를 누르면 대부분 정상 완료됩니다. '
+                    + '<span class="mini">(실패한 생성은 저장되지 않아 그대로 재시도하면 됩니다)</span>';
+    setGenNote(
+        failReason === 'rewrite'
+      ? '<b>132문항 재작성을 끝내지 못해 저장하지 않았습니다.</b> 대개 AI 사용 한도(분당·일일) 초과, 모델 과부하, 연결 실패 때문입니다.<br>'
+        + '· <b>일부만 바뀐 체크포인트는 파일로 만들지 않습니다</b> — 원문과 현장 표현이 섞인 자료가 현장에 퍼지지 않게 하기 위한 것입니다.<br>'
+        + '· 중간 결과는 이 화면에서 확인만 할 수 있습니다.<br>' + RETRY_TIP
+      : failReason === 'select'
+      ? '<b>AI 항목 선정을 끝내지 못해 저장하지 않았습니다.</b> 대개 AI 사용 한도(분당·일일) 초과나 모델 과부하 때문입니다.<br>'
+        + '· 문장은 재작성되었지만, <b>업종·직종에 맞는 관리자용 54개·작업자용 20개 선정이 빠진 자료는 파일로 만들지 않습니다.</b><br>'
+        + '· 화면의 항목은 규칙 계산으로 고른 임시 목록입니다.<br>' + RETRY_TIP
+      : failReason === 'noai'
+      ? '<b>AI를 사용할 수 없어 생성하지 않았습니다.</b> 공용 서버 주소와 API 키가 모두 없습니다.<br>'
+        + '· 132문항 재작성과 항목 선정은 AI가 하는 일이므로, 이 상태에서는 파일을 만들지 않습니다.<br>'
+        + '· 화면에는 ILO 원문 132개와 규칙 계산으로 고른 임시 목록이 표시됩니다.'
+      : '공용 서버에 등록하지 못했습니다. <b>서버에 저장된 자료만 파일로 만들기 때문에</b> 이번에는 HTML 파일을 내려받지 않았습니다.<br>'
+        + '· 내용은 이 화면에서 그대로 확인할 수 있습니다.<br>' + RETRY_TIP);
     $('applyAiConfigBtn').style.display = 'inline-flex';
     if (btxt) btxt.textContent = '다시 시도';
     $('cancelAiConfigBtn').textContent = '닫기';
   }
+  const FAIL_MSG = { rewrite: '132문항 재작성을 끝내지 못해', select: 'AI 항목 선정을 끝내지 못해',
+                     noai: 'AI를 사용할 수 없어' };
   notify(saved ? `${industry} / ${jobType} 체크포인트를 ${secs}초 만에 준비했습니다.`
-               : `${industry} / ${jobType} — 서버에 등록하지 못해 파일을 만들지 않았습니다.`,
+               : `${industry} / ${jobType} — ${FAIL_MSG[failReason] || '서버에 등록하지 못해'} 파일을 만들지 않았습니다.`,
          saved ? 'success' : 'error');
 }
 
@@ -3372,12 +3433,23 @@ $('cache-accordion-container').addEventListener('click', e => {
    admin.html 이 읽는 즉시 지운다. 예전 버전이 남겨 둔 localStorage 값도 발견 즉시 삭제한다. */
 const ADMIN_CFG = 'ergAdminCfg';
 const ADMIN_HANDOFF = 'ergAdminHandoff';
+const SRV_WARM = 'ergSrvWarm';          // 앱스 스크립트를 방금 깨웠다는 표시 (admin.html 이 읽는다)
+function markWarm() { try { sessionStorage.setItem(SRV_WARM, String(Date.now())); } catch (e) {} }
+/** 서버 예열 — 접속자 읽기가 Firestore 로 빠진 뒤로 앱스 스크립트는 잠들어 있는 시간이 길다.
+    관리자 관문을 여는 순간부터 뒤에서 깨워 두면 admin.html 의 첫 연결이 눈에 띄게 빨라진다. */
+function warmServer() {
+  if (!CONFIG.API_URL) return;
+  try {
+    fetch(`${CONFIG.API_URL}?action=ping`, { redirect: 'follow' })
+      .then(r => { if (r.ok) markWarm(); }).catch(() => {});
+  } catch (e) {}
+}
 try { localStorage.removeItem(ADMIN_CFG); } catch (e) {}   // 과거 버전이 남긴 토큰 청소
 function openAdminGate() {
   /* ★ 서버 예열 — 접속자 읽기가 Firestore 로 빠진 뒤로 앱스 스크립트는 잠들어 있는
      시간이 길어졌다(콜드스타트 5~10초). 토큰을 입력하는 동안 뒤에서 미리 깨워 두면
      토큰 확인과 관리자 화면 연결이 눈에 띄게 빨라진다. 실패해도 조용히 무시한다. */
-  if (CONFIG.API_URL) { try { fetch(`${CONFIG.API_URL}?action=ping`, { redirect: 'follow' }).catch(() => {}); } catch (e) {} }
+  warmServer();
   /* ★ 관문은 서버를 확인하지 않는다 — 토큰만 받아 넘긴다.
      연결 확인도, 토큰 검증도 admin.html 이 담당하므로 여기서 기다릴 이유가 없다. */
   $('admin-token-input').value = '';
@@ -3434,8 +3506,13 @@ async function enterAdmin() {
   $('admin-token-input').disabled = false;
 
   if (res === 'ok') {
-    /* 1회용 인계 — admin.html 이 첫 로드에서 읽고 즉시 지운다. 어디에도 영구 저장하지 않는다. */
-    try { sessionStorage.setItem(ADMIN_HANDOFF, JSON.stringify({ api: CONFIG.API_URL, atoken: tok, ok: 1 })); } catch (e) {}
+    /* 1회용 인계 — admin.html 이 첫 로드에서 읽고 즉시 지운다. 어디에도 영구 저장하지 않는다.
+       ★ 토큰 확인이 통과했다는 것은 서버가 지금 깨어 있다는 뜻이다. 그 사실(warm)과
+          이 화면이 이미 갖고 있는 공용 목록을 함께 넘겨, 관리자 화면이 빈 표로 시작하지 않게 한다.
+          넘긴 목록은 «임시 표시»일 뿐이고, admin.html 이 서버 목록을 받으면 곧바로 대체된다. */
+    markWarm();
+    const seed = (CATALOG || []).map(x => ({ i: x.i, j: x.j, f: x.f, k: x.k, d: x.d })).slice(0, 400);
+    try { sessionStorage.setItem(ADMIN_HANDOFF, JSON.stringify({ api: CONFIG.API_URL, atoken: tok, ok: 1, warm: Date.now(), items: seed })); } catch (e) {}
     msg.style.color = '#166534';
     msg.textContent = '관리자 화면으로 이동합니다…';
     setTimeout(() => { location.href = 'admin.html'; }, 200);
@@ -3489,10 +3566,20 @@ function exportHtml(payload) {
   const marker = '<script id="embedded-data" type="application/json">null<\/script>';
   if (PRISTINE_HTML.indexOf(marker) === -1) { notify('내보내기 실패: 템플릿 표식을 찾을 수 없습니다.', 'error'); return; }
   let html = PRISTINE_HTML.replace(marker, '<script id="embedded-data" type="application/json">' + json + '<\/script>');
-  /* ★ 번역표는 고른 언어만 실어 보낸다 — 16개 언어를 전부 넣으면 파일이 100KB 넘게 커진다.
-     (한국어·영어는 문항 자체에 들어 있어 언제나 나온다) */
-  const keep = (payload.langs && payload.langs.length ? payload.langs : S.langs).filter(c => LANG_OF.has(c));
-  const trim = {}; keep.forEach(c => { if (WTR[c]) trim[c] = WTR[c]; });
+  /* ★ 번역표 — 16개 언어를 모두 담되, 항목은 이 파일이 실제로 쓰는 20개만 담는다.
+     · 언어를 고르는 항목을 없앴으므로 언어는 전부 싣는다. 그래야 파일을 받은 현장에서
+       「🌐 표시 언어」로 어떤 나라 말이든 즉시 꺼내 쓸 수 있다.
+     · 반면 항목은 업종·직종으로 정해진 20개가 고정이라 나머지 65개 번역은 쓰이지 않는다.
+       85개를 다 실으면 약 120KB, 20개만 실으면 약 30KB — 쓰지 않는 것은 빼고 보낸다.
+     (자료에 20개 목록이 없는 예외적인 경우에만 85개를 그대로 실어 빈칸을 막는다) */
+  const only = (payload.pictoIds && payload.pictoIds.length) ? payload.pictoIds.map(String) : null;
+  const trim = {};
+  Object.keys(WTR).forEach(c => {
+    if (!WTR[c]) return;
+    if (!only) { trim[c] = WTR[c]; return; }
+    const t = {}; only.forEach(id => { if (WTR[c][id] != null) t[id] = WTR[c][id]; });
+    trim[c] = t;
+  });
   const wtrJson = JSON.stringify(trim).replace(/</g, '\\u003c');
   html = html.replace(/(<script id="wtr-data" type="application\/json">)[\s\S]*?(<\/script>)/,
                       (m, a, b) => a + wtrJson + b);
