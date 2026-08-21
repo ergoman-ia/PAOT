@@ -1393,8 +1393,9 @@ function render() {
     html += `<tr><td colspan="4" id="${cid}" class="category-header">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
         <span>${esc(cat)} <span style="font-weight:400;font-size:.85rem">(${list.length}항목)</span></span>
-        <span style="font-weight:400;font-size:.8rem;white-space:nowrap">응답:
-          <b style="color:#16a34a">○ 잘하고 있음</b> · <b style="color:#d97706">△ 고쳐야 함</b> · <b style="color:#dc2626">✕ 해당 없음</b></span>
+        <span style="font-weight:400;font-size:.8rem">응답:
+          <b style="color:#16a34a">○ 잘하고 있음</b> · <b style="color:#d97706">△ 고쳐야 함</b> · <b style="color:#dc2626">✕ 해당 없음</b>
+          <span style="color:#64748b">(같은 기호를 다시 누르면 해제)</span></span>
       </div></td></tr>`;
     html += `<tr class="column-header"><th class="center" style="width:6%">연번</th><th style="width:54%">인간공학 체크포인트</th><th class="center" style="width:18%">구체적인 사항</th><th class="center" style="width:15%">응답</th></tr>`;
     for (const id of list) {
@@ -1402,7 +1403,7 @@ function render() {
          작업자용 표에서 답하면 픽토그램 카드에도 그대로 나타난다(자동 동기화) */
       const a = S.pictoAns.get(id) || '';
       const rd3 = (v, cls, sym) =>
-        `<label><input type="radio" name="tq${id}" value="${v}" class="tans" data-id="${id}"${a === v ? ' checked' : ''}><span class="o ${cls}">${sym}</span></label>`;
+        `<label title="다시 누르면 응답이 지워집니다"><input type="radio" name="tq${id}" value="${v}" class="tans" data-id="${id}"${a === v ? ' checked' : ''}><span class="o ${cls}">${sym}</span></label>`;
       html += `<tr class="checklist-item" data-id="${id}">
         <td class="center">${SEQ.get(id)}</td>
         <td>${esc(T(id).text)}</td>
@@ -1595,7 +1596,7 @@ function cardHtml(id, n, opts) {
   /* 인쇄 — 보고서(작업자용 표)와 똑같이, 선택된 기호 하나만 칸에 넣는다.
      답이 없으면 빈 칸으로 남아 종이에서 직접 쓸 수 있다. 흑백 인쇄에서도 명확하다. */
   const rd = (v, cls, sym) =>
-    `<label><input type="radio" name="pq${id}" value="${v}" class="pans" data-id="${id}"${ans === v ? ' checked' : ''}><span class="o ${cls}">${sym}</span></label>`;
+    `<label title="다시 누르면 응답이 지워집니다"><input type="radio" name="pq${id}" value="${v}" class="pans" data-id="${id}"${ans === v ? ' checked' : ''}><span class="o ${cls}">${sym}</span></label>`;
   const ansBox = o.print
     ? `<div class="ansg"><span class="o one">${({ o: '○', m: '△', x: '✕' }[ans] || '')}</span></div>`
     : `<div class="ansg">${rd('o', 'ok', '○')}${rd('m', 'mid', '△')}${rd('x', 'no2', '✕')}</div>`;
@@ -1639,13 +1640,49 @@ function renderPicto() {
     + ` · 언어 <b>한국어·영어${ls.length ? ' 외 ' + ls.length + '개' : ''}</b>`;
 }
 
-document.getElementById('picto-list').addEventListener('change', e => {
-  const r = e.target.closest('.pans'); if (!r) return;
-  S.pictoAns.set(+r.dataset.id, r.value);
+/* ---------- 응답 개별 해제(같은 기호를 두 번 누르기) ----------
+   라디오 단추는 원래 「고르기」만 되고 「풀기」가 안 된다. 그래서 ✕를 눌러 둔 항목을
+   ○·△·✕ 아무것도 아닌 상태(=아직 응답 안 함)로 되돌릴 방법이 없었다.
+   → 이미 켜져 있는 기호를 한 번 더 누르면 그 항목의 응답만 지운다(다른 항목은 그대로).
+   누르기 직전 상태를 pointerdown 에서 미리 적어 두므로 click·change 순서와 상관없이 정확하다. */
+let ANS_PRE = null, ANS_PRE_SET = false;
+document.addEventListener('pointerdown', e => {
+  const lab = e.target && e.target.closest ? e.target.closest('label') : null;
+  const r = lab ? lab.querySelector('input.pans, input.tans') : null;
+  ANS_PRE = (r && r.checked) ? r : null;
+  ANS_PRE_SET = true;
+}, true);
+
+/* 눌린 것이 「이미 골라 둔 그 기호」면 응답을 지우고 true 를 돌려준다 */
+function ansToggleOff(e, cls, after) {
+  const r = e.target;
+  if (!r || r.tagName !== 'INPUT' || r.type !== 'radio' || !r.classList.contains(cls)) return false;
+  const id = +r.dataset.id;
+  /* pointerdown 이 잡히지 않는 경우(키보드 스페이스 등)에는 저장된 응답과 비교한다 */
+  const was = ANS_PRE_SET ? (ANS_PRE === r) : (S.pictoAns.get(id) === r.value);
+  ANS_PRE = null; ANS_PRE_SET = false;
+  if (!was) return false;
+  r.checked = false;                 // 세 기호 모두 해제 — 아직 응답하지 않은 상태로 되돌린다
+  S.pictoAns.delete(id);
   persistPicto();
+  if (after) after();
+  return true;
+}
+
+/* 픽토그램 화면의 「응답 n건」 숫자만 다시 쓴다 */
+function pictoDoneLabel() {
   const done = S.pictoIds.filter(id => S.pictoAns.has(id)).length;
   const el = document.getElementById('pc-count');
-  el.innerHTML = el.innerHTML.replace(/응답 <b>\d+<\/b>건/, `응답 <b>${done}</b>건`);
+  if (el) el.innerHTML = el.innerHTML.replace(/응답 <b>\d+<\/b>건/, `응답 <b>${done}</b>건`);
+}
+
+document.getElementById('picto-list').addEventListener('click', e => ansToggleOff(e, 'pans', pictoDoneLabel));
+document.getElementById('picto-list').addEventListener('change', e => {
+  const r = e.target.closest('.pans'); if (!r) return;
+  if (!r.checked) return;            // 방금 해제한 것이면 다시 켜지 않는다
+  S.pictoAns.set(+r.dataset.id, r.value);
+  persistPicto();
+  pictoDoneLabel();
 });
 /* (삭제됨) 픽토그램 화면의 「응답 지우기」·「인쇄」 버튼 —
    ⋮ 메뉴의 「응답 전체 해제」와 「체크포인트(인쇄용) 생성 → 작업자용 픽토그램」이
@@ -1794,8 +1831,11 @@ body.addEventListener('click', e => {
   document.getElementById('modal-ideas').innerHTML = e2.ideas.map(i => `<li>${esc(i)}</li>`).join('');
   show('ideaModal');
 });
+/* 표에서도 같은 기호를 다시 누르면 그 줄의 응답이 지워진다 */
+body.addEventListener('click', e => ansToggleOff(e, 'tans', updateCount));
 body.addEventListener('change', e => {
   if (!e.target.classList.contains('tans')) return;
+  if (!e.target.checked) return;     // 방금 해제한 것이면 다시 켜지 않는다
   /* 표의 ○△✕ — 픽토그램과 같은 저장소에 기록되어 두 화면이 항상 같은 응답을 보여준다 */
   S.pictoAns.set(+e.target.dataset.id, e.target.value);
   persistPicto(); updateCount();
