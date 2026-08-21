@@ -531,11 +531,14 @@ details.adv summary{cursor:pointer;font-size:.88rem;color:#4b5563;font-weight:60
   text-transform:uppercase;letter-spacing:.02em}
 .pcard p.tr .tx{flex:1;min-width:0}
 .pcard p.tr .tx[dir="rtl"]{direction:rtl;text-align:right;unicode-bidi:isolate}
-.ansg{display:flex;gap:6px;flex:0 0 auto}
+.ansg{display:flex;gap:5px;flex:0 0 auto}
 .ansg label{cursor:pointer}
 .ansg input{display:none}
-.ansg .o{display:flex;align-items:center;justify-content:center;width:40px;height:40px;border:2px solid #d1d5db;
-  border-radius:8px;font-size:1.3rem;font-weight:600;color:#9ca3af;transition:.12s}
+/* ○△✕ 크기 — 기존(40px)의 70% */
+.ansg .o{display:flex;align-items:center;justify-content:center;width:28px;height:28px;border:2px solid #d1d5db;
+  border-radius:6px;font-size:.95rem;font-weight:600;color:#9ca3af;transition:.12s}
+/* 표(전문가·관리자·작업자) 안의 응답칸 — 카드와 같은 모양, 가운데 정렬 */
+.ansg.tbl{display:inline-flex;vertical-align:middle}
 .ansg input:checked+.ok{border-color:#16a34a;color:#16a34a;background:#f0fdf4}
 .ansg input:checked+.mid{border-color:#d97706;color:#d97706;background:#fffbeb}
 .ansg input:checked+.no2{border-color:#dc2626;color:#dc2626;background:#fef2f2}
@@ -574,7 +577,7 @@ details.adv summary{cursor:pointer;font-size:.88rem;color:#4b5563;font-weight:60
           <hr class="dropdown-divider">
           <button id="load-btn">불러오기 (CSV)</button>
           <button id="save-btn">저장하기 (CSV)</button>
-          <button id="reset-btn">조치여부 전체 해제</button>
+          <button id="reset-btn">응답 전체 해제</button>
           <hr class="dropdown-divider">
           <button id="generate-btn">체크포인트(인쇄용) 생성</button>
           <hr class="dropdown-divider ai-only">
@@ -597,6 +600,10 @@ details.adv summary{cursor:pointer;font-size:.88rem;color:#4b5563;font-weight:60
       <input type="search" id="search-input" placeholder="🔍 체크포인트 검색 (예: 통로, 소음, 조명)" style="flex:0 1 320px;width:320px;max-width:320px">
     </div>
 
+    <!-- 응답 기호 안내 — 모든 화면(전문가·관리자·작업자·픽토그램) 공통 -->
+    <div id="ans-legend" class="no-print" style="margin:8px 0 2px;font-size:.88rem;color:#374151;border:1px solid #d1d5db;border-radius:8px;padding:6px 12px;display:inline-block">
+      응답: <b style="color:#16a34a">○ 잘하고 있음</b> &nbsp;·&nbsp; <b style="color:#d97706">△ 고쳐야 함</b> &nbsp;·&nbsp; <b style="color:#dc2626">✕ 해당 없음</b>
+    </div>
     <div id="category-buttons"></div>
   </nav>
 
@@ -658,11 +665,12 @@ details.adv summary{cursor:pointer;font-size:.88rem;color:#4b5563;font-weight:60
         <b>작업자용과 픽토그램은 같은 20개 항목</b>을 표로 보느냐 그림 카드로 보느냐의 차이입니다 — 업종·직종에 맞추어 자동으로 선정되며 양쪽이 항상 일치합니다.</li>
       <li style="margin-bottom:8px"><b>검색</b> — 상단 검색창에 단어를 넣으면 해당 문항만 걸러 보여줍니다.</li>
       <li style="margin-bottom:8px"><b>보기 버튼</b> — 그 항목을 개선할 구체적 아이디어를 확인합니다.</li>
-      <li style="margin-bottom:8px"><b>조치여부</b> — 토글을 켜면 자동 저장되어 브라우저를 닫았다 열어도 유지됩니다.</li>
+      <li style="margin-bottom:8px"><b>응답</b> — 모든 화면에서 ○(잘하고 있음)·△(고쳐야 함)·✕(해당 없음) 세 가지로 답합니다.
+        자동 저장되어 브라우저를 닫았다 열어도 유지되고, 작업자용 표와 픽토그램 카드는 같은 응답을 공유합니다.</li>
     </ul>
     <h4 style="margin-top:18px;color:#1e3a8a">2. 메뉴 기능</h4>
     <ul style="list-style:disc;padding-left:20px">
-      <li style="margin-bottom:8px"><b>저장/불러오기</b> — 조치여부 상태를 CSV로 백업·복원합니다.</li>
+      <li style="margin-bottom:8px"><b>저장/불러오기</b> — 응답(○△✕) 상태를 CSV로 백업·복원합니다.</li>
       <li style="margin-bottom:8px"><b>체크포인트(인쇄용) 생성</b> — 작업자용·관리자용·전문가용 보고서를 즉시 만들어 인쇄합니다.</li>
       <li style="margin-bottom:8px" class="ai-only"><b>맞춤 업종·직종별 체크포인트 생성</b> — 업종·직종을 넣으면 132개 문항이 그 현장 용어로 재작성된 전용 HTML 파일이 내려받아집니다. 생성에는 보통 60~100초가 걸립니다.</li>
     </ul>
@@ -1307,11 +1315,13 @@ const S = {
   industry: '', jobType: '',
   EXPERT: new Map(),      // id -> {text, ideas[]}   ← 유일한 문장 원천
   managerIds: [], workerIds: [],
-  checked: new Set(),
   view: 'expert', query: '',
   /* ── 작업자용 픽토그램 체크리스트 ── */
   pictoIds: [],           // 화면·인쇄에 넣을 픽토그램 항목 id
-  pictoAns: new Map(),    // id -> 'o'(잘함) | 'm'(개선필요) | 'x'(해당없음)
+  /* ★ 통합 응답 저장소 — 132문항 전체의 ○△✕ 응답이 여기 담긴다.
+     전문가·관리자·작업자 표와 픽토그램 카드가 모두 이 하나를 읽고 쓰므로,
+     작업자용 표에서 답한 것이 픽토그램 카드에 그대로 나타난다(자동 동기화). */
+  pictoAns: new Map(),    // id -> 'o'(잘하고 있음) | 'm'(고쳐야 함) | 'x'(해당 없음)
   langs: [],              // 카드에 함께 인쇄할 언어 코드 (한국어·영어는 항상 별도로 표시)
   /* 업종·직종 맞춤 생성으로 만든 현장 표현 문구 — { id: { ko, en, vi, ... } }.
      여기 있으면 내장 번역표(WTR)보다 우선한다. 없으면 내장 번역표를 쓴다. */
@@ -1380,13 +1390,18 @@ function render() {
     const cid = 'cat-' + CATS.indexOf(cat);
     nav += `<a href="#${cid}" >${esc(cat)} (${list.length})</a>`;
     html += `<tr><td colspan="4" id="${cid}" class="category-header">${esc(cat)} <span style="font-weight:400;font-size:.85rem">(${list.length}항목)</span></td></tr>`;
-    html += `<tr class="column-header"><th class="center" style="width:6%">연번</th><th style="width:54%">인간공학 체크포인트</th><th class="center" style="width:18%">구체적인 사항</th><th class="center" style="width:15%">조치여부</th></tr>`;
+    html += `<tr class="column-header"><th class="center" style="width:6%">연번</th><th style="width:54%">인간공학 체크포인트</th><th class="center" style="width:18%">구체적인 사항</th><th class="center" style="width:15%">응답</th></tr>`;
     for (const id of list) {
+      /* 응답은 픽토그램 카드와 같은 ○△✕ 3단계 — 저장소(S.pictoAns)도 같아서
+         작업자용 표에서 답하면 픽토그램 카드에도 그대로 나타난다(자동 동기화) */
+      const a = S.pictoAns.get(id) || '';
+      const rd3 = (v, cls, sym) =>
+        `<label><input type="radio" name="tq${id}" value="${v}" class="tans" data-id="${id}"${a === v ? ' checked' : ''}><span class="o ${cls}">${sym}</span></label>`;
       html += `<tr class="checklist-item" data-id="${id}">
         <td class="center">${SEQ.get(id)}</td>
         <td>${esc(T(id).text)}</td>
         <td class="center"><button class="btn btn-secondary act-view" data-id="${id}">보기</button></td>
-        <td class="center"><label class="switch"><input type="checkbox" class="act-chk" data-id="${id}"${S.checked.has(id) ? ' checked' : ''}><span class="slider"></span></label></td>
+        <td class="center"><span class="ansg tbl">${rd3('o', 'ok', '○')}${rd3('m', 'mid', '△')}${rd3('x', 'no2', '✕')}</span></td>
       </tr>`;
     }
     html += `<tr><td colspan="4" style="text-align:right;padding:10px"><a href="#category-nav" class="to-top-btn">맨 위로</a></td></tr>`;
@@ -1399,7 +1414,7 @@ function render() {
 
 function updateCount() {
   const ids = currentIds();
-  const done = ids.filter(id => S.checked.has(id)).length;
+  const done = ids.filter(id => S.pictoAns.has(id)).length;
   document.getElementById('seg-m').textContent = S.managerIds.length;
   document.getElementById('seg-w').textContent = S.workerIds.length;
   document.querySelectorAll('.m-n').forEach(e => e.textContent = S.managerIds.length);
@@ -1547,7 +1562,8 @@ const activeLangs = () => S.langs.filter(langReady);
 function setPictoIds(ids) {
   S.pictoIds = (ids || []).filter(id => WP.has(id));
   S.workerIds = S.pictoIds.slice();
-  [...S.pictoAns.keys()].forEach(id => { if (!S.pictoIds.includes(id)) S.pictoAns.delete(id); });
+  /* (변경) 목록 밖 응답을 지우지 않는다 — S.pictoAns 는 이제 132문항 전체의
+     응답 저장소이므로, 픽토그램 20개 밖의 표(전문가·관리자) 응답도 여기 살아 있다. */
 }
 
 function persistPicto() {
@@ -1607,10 +1623,10 @@ function renderPicto() {
     : '표시할 픽토그램 항목이 없습니다. 업종·직종을 먼저 적용해 주세요.';
   const done = S.pictoIds.filter(id => S.pictoAns.has(id)).length;
   const ls = activeLangs();
+  /* 언어 이름 나열은 하지 않는다 — 16개를 다 고르면 헤더가 언어 목록으로 뒤덮였다 */
   document.getElementById('pc-count').innerHTML =
     `총 <b>${S.pictoIds.length}</b>항목 · 응답 <b>${done}</b>건`
-    + ` · 언어 <b>한국어·영어${ls.length ? ' 외 ' + ls.length + '개' : ''}</b>`
-    + (ls.length ? ` <span style="color:#64748b">(${ls.map(c => esc((LANG_OF.get(c) || {}).ko || c)).join(', ')})</span>` : '');
+    + ` · 언어 <b>한국어·영어${ls.length ? ' 외 ' + ls.length + '개' : ''}</b>`;
 }
 
 document.getElementById('picto-list').addEventListener('change', e => {
@@ -1622,9 +1638,12 @@ document.getElementById('picto-list').addEventListener('change', e => {
   el.innerHTML = el.innerHTML.replace(/응답 <b>\d+<\/b>건/, `응답 <b>${done}</b>건`);
 });
 document.getElementById('pictoResetBtn').addEventListener('click', () => {
-  if (!S.pictoAns.size) { notify('지울 응답이 없습니다.', 'info'); return; }
-  if (!confirm('픽토그램 체크리스트의 응답을 모두 지울까요?')) return;
-  S.pictoAns.clear(); persistPicto(); renderPicto(); notify('응답을 모두 지웠습니다.', 'info');
+  const n = S.pictoIds.filter(id => S.pictoAns.has(id)).length;
+  if (!n) { notify('지울 응답이 없습니다.', 'info'); return; }
+  if (!confirm('작업자용(픽토그램) 20개 항목의 응답을 지울까요?\n(전문가·관리자용의 다른 응답은 그대로 둡니다)')) return;
+  /* 작업자용 20 = 픽토그램 20 이므로 이 20개만 지운다 — 두 화면에 함께 반영된다 */
+  S.pictoIds.forEach(id => S.pictoAns.delete(id));
+  persistPicto(); renderPicto(); notify('작업자용 응답을 지웠습니다.', 'info');
 });
 
 /* ---------- (삭제됨) 항목 관리 ----------
@@ -1718,9 +1737,9 @@ p.tr{display:flex;gap:6px;align-items:baseline}
 p.tr .lc{flex:0 0 26px;color:#9ca3af;font-size:7pt;font-weight:700;text-transform:uppercase}
 p.tr .tx{flex:1;min-width:0}
 p.tr .tx[dir="rtl"]{direction:rtl;text-align:right;unicode-bidi:isolate}
-.ansg{display:flex;gap:5px;flex:0 0 auto}
-.ansg .o{display:flex;align-items:center;justify-content:center;width:11mm;height:11mm;
-  border:1.4pt solid #6b7280;border-radius:5px;font-size:13pt;color:#6b7280}
+.ansg{display:flex;gap:4px;flex:0 0 auto}
+.ansg .o{display:flex;align-items:center;justify-content:center;width:8mm;height:8mm;
+  border:1.2pt solid #6b7280;border-radius:4px;font-size:9.5pt;color:#6b7280}
 .ansg .o.sel.ok{border-color:#15803d;color:#15803d;background:#f0fdf4}
 .ansg .o.sel.mid{border-color:#b45309;color:#b45309;background:#fffbeb}
 .ansg .o.sel.no2{border-color:#b91c1c;color:#b91c1c;background:#fef2f2}
@@ -1756,11 +1775,12 @@ function printPicto(idsIn) {
 }
 document.getElementById('pictoPrintBtn').addEventListener('click', () => printPicto());
 
+/* 옛 「조치여부」(켬/끔) 저장 키 — 이제 응답은 전부 S.pictoAns(○△✕)에 담기므로
+   이 키는 부팅 때 한 번 ○ 응답으로 이관하고 지우는 용도로만 남아 있다. */
 const CHECK_KEY = 'ergCheckState_v2' + (EMBEDDED
   ? '::' + String(EMBEDDED.industry || '').trim().toLowerCase()
   +  '::' + String(EMBEDDED.jobType  || '').trim().toLowerCase()
   : '');
-function persistChecks() { try { localStorage.setItem(CHECK_KEY, JSON.stringify([...S.checked])); } catch (e) {} }
 
 body.addEventListener('click', e => {
   const b = e.target.closest('.act-view');
@@ -1771,10 +1791,10 @@ body.addEventListener('click', e => {
   show('ideaModal');
 });
 body.addEventListener('change', e => {
-  if (!e.target.classList.contains('act-chk')) return;
-  const id = +e.target.dataset.id;
-  e.target.checked ? S.checked.add(id) : S.checked.delete(id);
-  persistChecks(); updateCount();
+  if (!e.target.classList.contains('tans')) return;
+  /* 표의 ○△✕ — 픽토그램과 같은 저장소에 기록되어 두 화면이 항상 같은 응답을 보여준다 */
+  S.pictoAns.set(+e.target.dataset.id, e.target.value);
+  persistPicto(); updateCount();
 });
 
 document.getElementById('view-seg').addEventListener('click', e => {
@@ -1823,18 +1843,16 @@ menu('manual-btn', () => show('manualModal'));
 menu('generate-btn', () => show('selectionReportModal'));
 menu('ai-config-btn', openAiModal);
 menu('show-cache-list-btn', () => { loadCacheList(); show('cacheListModal'); prefetchVisible(); });
-/* 생성·배포된 파일 — 지금까지처럼 조치여부만 해제한다.
-   본 앱 — 기본(범용) 체크포인트로 되돌리면서 조치여부도 함께 해제한다. */
+/* 생성·배포된 파일 — 응답만 해제한다.
+   본 앱 — 기본(범용) 체크포인트로 되돌리면서 응답도 함께 해제한다. */
 menu('reset-btn', () => {
   if (EMBEDDED) {
-    if (!confirm('모든 조치여부와 픽토그램 응답을 해제할까요?')) return;
-    S.checked.clear(); persistChecks();
+    if (!confirm('모든 응답(○△✕)을 해제할까요?')) return;
     S.pictoAns.clear(); persistPicto(); render();
-    notify('조치여부와 픽토그램 응답을 모두 해제했습니다.', 'info');
+    notify('응답을 모두 해제했습니다.', 'info');
     return;
   }
-  if (!confirm('기본 인간공학 체크포인트(ILO)로 되돌리고, 조치여부도 모두 해제할까요?')) return;
-  S.checked.clear(); persistChecks();
+  if (!confirm('기본 인간공학 체크포인트(ILO)로 되돌리고, 응답(○△✕)도 모두 해제할까요?')) return;
   S.industry = ''; S.jobType = '';
   loadExpert(BASE);
   const r = selectIds(PRI, '', '');            // 기본(범용) 선별로 복귀
@@ -1846,7 +1864,7 @@ menu('reset-btn', () => {
   document.getElementById('app-title').textContent = '인간공학 체크포인트(ILO)';
   document.title = '인간공학 체크포인트(ILO) v2';
   fillDatalists(''); render();
-  notify('기본 체크포인트로 초기화하고 조치여부를 모두 해제했습니다.', 'info');
+  notify('기본 체크포인트로 초기화하고 응답을 모두 해제했습니다.', 'info');
 });
 
 function notify(msg, type = 'success') {
@@ -1860,11 +1878,13 @@ function notify(msg, type = 'success') {
 /* ---------- 6. CSV ---------- */
 document.getElementById('save-btn').addEventListener('click', () => {
   dd.classList.remove('show');
-  let csv = '﻿ID,연번,범주,체크포인트,구체적인 사항,조치여부\n';
+  let csv = '﻿ID,연번,범주,체크포인트,구체적인 사항,응답\n';
   const qq = s => '"' + String(s).replace(/"/g, '""') + '"';
+  const ANS_LABEL = { o: 'O 잘하고 있음', m: '△ 고쳐야 함', x: 'X 해당 없음' };
   ORDER.forEach(id => {
     const e = T(id);
-    csv += [id, SEQ.get(id), qq(CAT_OF[id]), qq(e.text), qq(e.ideas.join(' / ')), S.checked.has(id)].join(',') + '\n';
+    csv += [id, SEQ.get(id), qq(CAT_OF[id]), qq(e.text), qq(e.ideas.join(' / ')),
+            qq(ANS_LABEL[S.pictoAns.get(id)] || '')].join(',') + '\n';
   });
   /* ── 작업자용 픽토그램 체크리스트 응답 ──
      같은 파일 안에 이어서 담는다. 첫 칸이 'P' 인 줄만 픽토그램 응답이므로
@@ -1887,24 +1907,27 @@ document.getElementById('csv-file-input').addEventListener('change', ev => {
   const f = ev.target.files[0]; if (!f) return;
   const r = new FileReader();
   r.onload = e => {
-    S.checked.clear();
-    let nPicto = 0;
+    S.pictoAns.clear();                              // 파일의 응답으로 통째로 교체한다
+    let n = 0;
+    const put = (id, sym) => { S.pictoAns.set(id, sym === 'O' ? 'o' : sym === '△' ? 'm' : 'x'); n++; };
     e.target.result.split(/\r?\n/).slice(1).forEach(line => {
       if (!line.trim()) return;
-      /* 픽토그램 응답 줄 — P,<id>, … ,"<응답>" */
+      /* 픽토그램 응답 줄(옛 형식 호환) — P,<id>, … ,"<응답>" */
       if (/^P,/.test(line)) {
         const id = parseInt(line.slice(2), 10);
         if (!WP.has(id)) return;
-        if (!nPicto) { S.pictoAns.clear(); }
         const m = /"?([O△X])[^",]*"?\s*$/.exec(line.trim());
-        if (m) { S.pictoAns.set(id, m[1] === 'O' ? 'o' : m[1] === '△' ? 'm' : 'x'); nPicto++; }
+        if (m) put(id, m[1]);
         return;
       }
       const id = parseInt(line, 10);
-      if (/true\s*$/i.test(line) && !isNaN(id)) S.checked.add(id);
+      if (isNaN(id)) return;
+      const m = /"([O△X])[^"]*"\s*$/.exec(line.trim());
+      if (m) { put(id, m[1]); return; }
+      if (/true\s*$/i.test(line)) put(id, 'O');       // 아주 옛 형식(조치여부 true/false) 호환
     });
-    persistChecks(); persistPicto(); render();
-    notify(nPicto ? `CSV를 불러왔습니다. (픽토그램 응답 ${nPicto}건 포함)` : 'CSV를 불러왔습니다.', 'info');
+    persistPicto(); render();
+    notify(`CSV를 불러왔습니다. (응답 ${n}건)`, 'info');
   };
   r.readAsText(f, 'UTF-8'); ev.target.value = '';
 });
@@ -1921,17 +1944,21 @@ function buildReport(type) {
               : type === 'manager' ? `관리자용 체크포인트 (범주별 ${ids.length})`
               : '전문가용 체크포인트 (전체 132)';
   document.getElementById('report-title').textContent = title;
-  let html = '';
+  /* 응답은 화면과 같은 ○△✕ — 인쇄물 맨 위에 기호 뜻을 함께 적는다 */
+  const sym = id => ({ o: '○', m: '△', x: '✕' }[S.pictoAns.get(id)] || '');
+  const legend = `<p style="font-size:.85rem;color:#374151;border:1px solid #d1d5db;border-radius:6px;
+    padding:5px 10px;display:inline-block;margin:0 0 10px">○ 잘하고 있음 &nbsp;·&nbsp; △ 고쳐야 함 &nbsp;·&nbsp; ✕ 해당 없음</p>`;
+  let html = legend;
   if (type === 'worker') {
-    html = `<table><thead><tr><th style="width:10%">번호</th><th style="width:70%">인간공학 체크포인트</th><th style="width:20%">조치여부</th></tr></thead><tbody>`
-      + ids.map(id => `<tr><td>${SEQ.get(id)}</td><td>${esc(T(id).text)}</td><td>${S.checked.has(id) ? 'O' : 'X'}</td></tr>`).join('')
+    html += `<table><thead><tr><th style="width:10%">번호</th><th style="width:70%">인간공학 체크포인트</th><th style="width:20%">응답</th></tr></thead><tbody>`
+      + ids.map(id => `<tr><td>${SEQ.get(id)}</td><td>${esc(T(id).text)}</td><td style="text-align:center">${sym(id)}</td></tr>`).join('')
       + `</tbody></table>`;
   } else {
     for (const cat of CATS) {
       const list = ids.filter(id => CAT_OF[id] === cat);
       if (!list.length) continue;
-      html += `<h4>${esc(cat)}</h4><table><thead><tr><th style="width:10%">번호</th><th style="width:70%">인간공학 체크포인트</th><th style="width:20%">조치여부</th></tr></thead><tbody>`
-        + list.map(id => `<tr><td>${SEQ.get(id)}</td><td>${esc(T(id).text)}</td><td>${S.checked.has(id) ? 'O' : 'X'}</td></tr>`).join('')
+      html += `<h4>${esc(cat)}</h4><table><thead><tr><th style="width:10%">번호</th><th style="width:70%">인간공학 체크포인트</th><th style="width:20%">응답</th></tr></thead><tbody>`
+        + list.map(id => `<tr><td>${SEQ.get(id)}</td><td>${esc(T(id).text)}</td><td style="text-align:center">${sym(id)}</td></tr>`).join('')
         + `</tbody></table>`;
     }
   }
@@ -2815,8 +2842,7 @@ function finish(flat, managerIds, workerIds, industry, jobType, t0, source, sele
      현장마다 제각각 남아 관리가 불가능해진다. */
   if (saved) exportHtml(rec);   // 선정 근거도 함께 담아 내보낸다
   /* 생성 결과를 현재 화면에는 반영한다 (파일을 열지 않아도 바로 확인 가능) */
-  /* ★ 다른 업종·직종의 조치여부를 그대로 물려받지 않도록 반드시 해제하고 시작한다 */
-  S.checked.clear(); persistChecks();
+  /* ★ 다른 업종·직종의 응답을 그대로 물려받지 않도록 아래에서 전부 해제하고 시작한다 */
   S.industry = industry; S.jobType = jobType;
   loadExpert(flat); S.managerIds = managerIds; S.workerIds = rec.workerIds;
   /* 픽토그램 체크리스트도 새 직종 기준으로 다시 맞춘다 — 앞 직종의 응답은 물려받지 않는다 */
@@ -3397,7 +3423,6 @@ $('cache-accordion-container').addEventListener('click', async e => {
   }
   if (!d) return;
   if (b.classList.contains('cache-apply')) {
-    S.checked.clear(); persistChecks();        // 앞서 보던 직종의 조치여부를 물려받지 않는다
     S.industry = d.industry; S.jobType = d.jobType;
     /* 표시 언어도 초기화 — 앞서 보던 직종에서 고른 언어를 물려받지 않고
        한국어·영어만 보이게 한다. 언어는 「🌐 표시 언어」에서 고르면 내장 번역으로 즉시 표시된다. */
@@ -3441,12 +3466,18 @@ function exportHtml(payload) {
 (function boot() {
   syncJobField(); fillDatalists('');           // 입력창 초기 안내 문구
 
-  try { const s = localStorage.getItem(CHECK_KEY); if (s) JSON.parse(s).forEach(id => S.checked.add(id)); } catch (e) {}
-
-  /* ── 픽토그램 체크리스트 초기화 ──
+  /* ── 응답·언어 초기화 ──
      ① 파일에 내장된 값 → ② 이 브라우저에 저장해 둔 값 → ③ 추천값 순서로 살린다. */
   try { const s = localStorage.getItem(PICTO_LANG_KEY); if (s) S.langs = JSON.parse(s).filter(c => LANG_OF.has(c)); } catch (e) {}
   try { const s = localStorage.getItem(PICTO_ANS_KEY); if (s) JSON.parse(s).forEach(([id, v]) => S.pictoAns.set(+id, v)); } catch (e) {}
+  /* 옛 「조치여부」(켬/끔) 기록 이관 — 켜져 있던 항목은 ○ 응답으로 한 번만 옮기고 키를 지운다 */
+  try {
+    const s = localStorage.getItem(CHECK_KEY);
+    if (s) {
+      JSON.parse(s).forEach(id => { if (!S.pictoAns.has(+id)) S.pictoAns.set(+id, 'o'); });
+      localStorage.removeItem(CHECK_KEY); persistPicto();
+    }
+  } catch (e) {}
 
   if (EMBEDDED) {
     /* 맞춤형(배포된) 파일 모드 — AI 기능 숨김, 데이터는 파일에 내장 */
@@ -3471,9 +3502,9 @@ function exportHtml(payload) {
     const r = selectIds(PRI, '', '');       // 관리자용 54개는 기존 선별기가 담당
     S.managerIds = r.managerIds;
     setPictoIds(selectWorkerPicto('', '', WP_TARGET));    // 작업자용 20개는 픽토그램 항목 중에서
-    /* 본 앱의 「조치여부 전체 해제」는 기본 체크포인트 복귀까지 겸하므로 이름을 구분한다.
+    /* 본 앱의 「응답 전체 해제」는 기본 체크포인트 복귀까지 겸하므로 이름을 구분한다.
        (PRISTINE_HTML 은 이 시점 이전에 떠 두므로, 내보내는 파일에는 원래 이름이 남는다) */
-    const rb = $('reset-btn'); if (rb) rb.textContent = '조치여부 전체 해제(초기화)';
+    const rb = $('reset-btn'); if (rb) rb.textContent = '응답 전체 해제(초기화)';
     loadCatalog();
   }
   /* 픽토그램 항목 구성은 더 이상 브라우저 저장값을 쓰지 않는다 —
