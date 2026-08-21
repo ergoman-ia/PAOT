@@ -1740,10 +1740,14 @@ p.tr .tx{flex:1;min-width:0}
 p.tr .tx[dir="rtl"]{direction:rtl;text-align:right;unicode-bidi:isolate}
 .ansg{display:flex;gap:4px;flex:0 0 auto}
 .ansg .o{display:flex;align-items:center;justify-content:center;width:8mm;height:8mm;
-  border:1.2pt solid #6b7280;border-radius:4px;font-size:9.5pt;color:#6b7280}
-.ansg .o.sel.ok{border-color:#15803d;color:#15803d;background:#f0fdf4}
-.ansg .o.sel.mid{border-color:#b45309;color:#b45309;background:#fffbeb}
-.ansg .o.sel.no2{border-color:#b91c1c;color:#b91c1c;background:#fef2f2}
+  border:1.2pt solid #9ca3af;border-radius:4px;font-size:9.5pt;color:#9ca3af}
+/* ★ 선택된 응답 — 흑백 인쇄에서도 구분되도록 색이 아니라 "굵은 테두리 + 진한 굵은 기호 + 회색 바탕"으로 표시.
+   (색만으로 구분하면 흑백 인쇄에서 셋이 똑같아 보인다. 배경 인쇄가 꺼진 브라우저에서도 굵은 테두리는 남는다) */
+.ansg .o.sel{border:2.4pt solid #111827;color:#111827;font-weight:900;background:#e5e7eb;
+  -webkit-print-color-adjust:exact;print-color-adjust:exact}
+.ansg .o.sel.ok{border-color:#111827;color:#111827}
+.ansg .o.sel.mid{border-color:#111827;color:#111827}
+.ansg .o.sel.no2{border-color:#111827;color:#111827}
 .pg .ln{fill:none;stroke:#111827;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
 .pg .sh{fill:none;stroke:#111827;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
 .pg .ac{fill:none;stroke:#1d4ed8;stroke-width:3.2;stroke-linecap:round;stroke-linejoin:round}
@@ -1768,8 +1772,9 @@ function printPicto(idsIn) {
   <style>${PICTO_PRINT_CSS}</style></head><body>
   <h2>${esc(title)}</h2>
   <p class="sub">Worker Safety Checklist &nbsp;·&nbsp; ${esc(ids.length)} items${ls.length ? ' · ' + ls.map(c => esc((LANG_OF.get(c) || {}).n || c)).join(' / ') : ''}</p>
-  <div style="text-align:center"><span class="legend">○ 잘하고 있음 / Good &nbsp;&nbsp; △ 고쳐야 함 / Needs fixing &nbsp;&nbsp; ✕ 해당 없음 / Not applicable</span></div>
   <div class="meta"><b>날짜 Date</b><span></span><b>이름 Name</b><span></span><b>작업장 Site</b><span></span></div>
+  <!-- 범례 — 카드 오른쪽 끝의 응답칸 바로 위에 오도록 오른쪽 정렬 -->
+  <div style="text-align:right;margin:0 0 6px"><span class="legend" style="transform:none;left:auto">○ 잘하고 있음 / Good &nbsp;&nbsp; △ 고쳐야 함 / Needs fixing &nbsp;&nbsp; ✕ 해당 없음 / Not applicable</span></div>
   ${cards}
   </body></html>`);
   w.document.close(); w.focus(); setTimeout(() => { try { w.print(); } catch (e) {} }, 400);
@@ -1944,10 +1949,11 @@ function buildReport(type) {
               : type === 'manager' ? `관리자용 체크포인트 (범주별 ${ids.length})`
               : '전문가용 체크포인트 (전체 132)';
   document.getElementById('report-title').textContent = title;
-  /* 응답은 화면과 같은 ○△✕ — 인쇄물 맨 위에 기호 뜻을 함께 적는다 */
+  /* 응답은 화면과 같은 ○△✕ — 기호 뜻(범례)은 오른쪽 정렬로, 응답 열 바로 위에 오게 한다.
+     흑백 인쇄를 고려해 기호(모양)만으로 구분되며, 뜻은 이 범례로 확인한다. */
   const sym = id => ({ o: '○', m: '△', x: '✕' }[S.pictoAns.get(id)] || '');
-  const legend = `<p style="font-size:.85rem;color:#374151;border:1px solid #d1d5db;border-radius:6px;
-    padding:5px 10px;display:inline-block;margin:0 0 10px">○ 잘하고 있음 &nbsp;·&nbsp; △ 고쳐야 함 &nbsp;·&nbsp; ✕ 해당 없음</p>`;
+  const legend = `<div style="text-align:right;margin:0 0 8px"><span style="font-size:.85rem;color:#374151;border:1px solid #d1d5db;border-radius:6px;
+    padding:5px 10px;display:inline-block">○ 잘하고 있음 &nbsp;·&nbsp; △ 고쳐야 함 &nbsp;·&nbsp; ✕ 해당 없음</span></div>`;
   let html = legend;
   if (type === 'worker') {
     html += `<table><thead><tr><th style="width:10%">번호</th><th style="width:70%">인간공학 체크포인트</th><th style="width:20%">응답</th></tr></thead><tbody>`
