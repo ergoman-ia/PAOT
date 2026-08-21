@@ -595,7 +595,7 @@ details.adv summary{cursor:pointer;font-size:.88rem;color:#4b5563;font-weight:60
         <button data-view="expert" class="active">전문가용 132</button>
         <button data-view="manager">관리자용 <span id="seg-m">54</span></button>
         <button data-view="worker">작업자용 <span id="seg-w">20</span></button>
-        <button data-view="picto">🖼 픽토그램 <span id="seg-p">24</span></button>
+        <button data-view="picto">🖼 외국인 노동자용 <span id="seg-p">24</span></button>
       </div>
       <input type="search" id="search-input" placeholder="🔍 체크포인트 검색 (예: 통로, 소음, 조명)" style="flex:0 1 320px;width:320px;max-width:320px">
     </div>
@@ -607,7 +607,7 @@ details.adv summary{cursor:pointer;font-size:.88rem;color:#4b5563;font-weight:60
     <table id="main-table"><tbody id="checklist-body"></tbody></table>
     <div id="picto-wrap">
       <div class="pc-bar no-print">
-        <b style="color:#1e3a8a">작업자용 픽토그램 체크리스트</b>
+        <b style="color:#1e3a8a">외국인 노동자용 체크리스트</b>
         <span class="mini" id="pc-count"></span>
         <span style="flex:1"></span>
         <!-- 항목 관리(임의 재선정) 기능은 없앴다 — 픽토그램 20은 업종·직종에 따라 자동 선정되며,
@@ -621,7 +621,7 @@ details.adv summary{cursor:pointer;font-size:.88rem;color:#4b5563;font-weight:60
         응답: <b style="color:#16a34a">○ 잘하고 있음</b> &nbsp;·&nbsp; <b style="color:#d97706">△ 고쳐야 함</b> &nbsp;·&nbsp; <b style="color:#dc2626">✕ 해당 없음</b>
       </div>
       <div id="picto-list"></div>
-      <p id="picto-empty" class="hide" style="text-align:center;color:#6b7280;padding:40px 0">표시할 픽토그램 항목이 없습니다.</p>
+      <p id="picto-empty" class="hide" style="text-align:center;color:#6b7280;padding:40px 0">표시할 외국인 노동자용 항목이 없습니다.</p>
     </div>
     <p id="empty-msg" class="hide" style="text-align:center;color:#6b7280;padding:40px 0">검색 결과가 없습니다.</p>
   </main>
@@ -632,7 +632,7 @@ details.adv summary{cursor:pointer;font-size:.88rem;color:#4b5563;font-weight:60
   <div class="modal-header"><h3>생성할 보고서 유형 선택</h3><button id="closeSelectionReportModal" class="modal-close">&times;</button></div>
   <div class="modal-body" style="display:flex;flex-direction:column;gap:12px">
     <p class="mini">모든 보고서는 즉시 생성됩니다. 관리자용·작업자용 문장은 전문가용 132개에서 <b>ID로 그대로 가져오므로 문장 변형이 발생하지 않습니다.</b></p>
-    <button id="generatePictoReportBtn" class="btn btn-primary" style="background:#0e7490">🖼 작업자용 픽토그램 카드 (<span class="p-n">24</span>항목·다국어)</button>
+    <button id="generatePictoReportBtn" class="btn btn-primary" style="background:#0e7490">🖼 외국인 노동자용 카드 (<span class="p-n">24</span>항목·다국어)</button>
     <button id="generateWorkerReportBtn" class="btn btn-primary">작업자용 (핵심 <span class="w-n">20</span>항목)</button>
     <button id="generateManagerReportBtn" class="btn btn-primary">관리자용 (범주별 <span class="m-n">54</span>항목)</button>
     <button id="generateExpertReportBtn" class="btn btn-primary">전문가용 (전체 132항목)</button>
@@ -661,12 +661,12 @@ details.adv summary{cursor:pointer;font-size:.88rem;color:#4b5563;font-weight:60
     <p>ILO 인간공학 체크포인트 132개를 기반으로 작업환경을 점검·개선하는 도구입니다.</p>
     <h4 style="margin-top:18px;color:#1e3a8a">1. 기본 사용법</h4>
     <ul style="list-style:disc;padding-left:20px">
-      <li style="margin-bottom:8px"><b>보기 상단 전환</b> — 전문가용(132) / 관리자용 / 작업자용 / 픽토그램을 버튼 하나로 즉시 전환합니다.
-        <b>작업자용과 픽토그램은 같은 20개 항목</b>을 표로 보느냐 그림 카드로 보느냐의 차이입니다 — 업종·직종에 맞추어 자동으로 선정되며 양쪽이 항상 일치합니다.</li>
+      <li style="margin-bottom:8px"><b>보기 상단 전환</b> — 전문가용(132) / 관리자용 / 작업자용 / 외국인 노동자용을 버튼 하나로 즉시 전환합니다.
+        <b>작업자용과 외국인 노동자용은 같은 20개 항목</b>을 표로 보느냐 그림 카드로 보느냐의 차이입니다 — 업종·직종에 맞추어 자동으로 선정되며 양쪽이 항상 일치합니다.</li>
       <li style="margin-bottom:8px"><b>검색</b> — 상단 검색창에 단어를 넣으면 해당 문항만 걸러 보여줍니다.</li>
       <li style="margin-bottom:8px"><b>보기 버튼</b> — 그 항목을 개선할 구체적 아이디어를 확인합니다.</li>
       <li style="margin-bottom:8px"><b>응답</b> — 모든 화면에서 ○(잘하고 있음)·△(고쳐야 함)·✕(해당 없음) 세 가지로 답합니다.
-        자동 저장되어 브라우저를 닫았다 열어도 유지되고, 작업자용 표와 픽토그램 카드는 같은 응답을 공유합니다.</li>
+        자동 저장되어 브라우저를 닫았다 열어도 유지되고, 작업자용 표와 외국인 노동자용 카드는 같은 응답을 공유합니다.</li>
     </ul>
     <h4 style="margin-top:18px;color:#1e3a8a">2. 메뉴 기능</h4>
     <ul style="list-style:disc;padding-left:20px">
@@ -674,7 +674,7 @@ details.adv summary{cursor:pointer;font-size:.88rem;color:#4b5563;font-weight:60
       <li style="margin-bottom:8px"><b>체크포인트(인쇄용) 생성</b> — 작업자용·관리자용·전문가용 보고서를 즉시 만들어 인쇄합니다.</li>
       <li style="margin-bottom:8px" class="ai-only"><b>맞춤 업종·직종별 체크포인트 생성</b> — 업종·직종을 넣으면 132개 문항이 그 현장 용어로 재작성된 전용 HTML 파일이 내려받아집니다. 생성에는 보통 60~100초가 걸립니다.</li>
     </ul>
-    <h4 style="margin-top:18px;color:#1e3a8a">3. 🖼 작업자용 픽토그램 체크리스트 (외국인 근로자용)</h4>
+    <h4 style="margin-top:18px;color:#1e3a8a">3. 🖼 외국인 노동자용 체크리스트 (그림·다국어)</h4>
     <p class="mini" style="margin-bottom:8px">업종·직종에 맞게 선정된 <b>작업자용 20개 체크포인트</b>를
       그림(픽토그램) 카드로 보여 주는 화면입니다. 카드의 한국어는 <b>작업자용 표와 같은 체크포인트 문장 그대로</b>이며,
       외국어는 미리 번역해 둔 내장 번역표에서 즉시 표시됩니다 (AI 사용 없음).
@@ -682,13 +682,13 @@ details.adv summary{cursor:pointer;font-size:.88rem;color:#4b5563;font-weight:60
       ③ “아니오”일 때 스스로 고치거나·멈추거나·즉시 알리는 행동으로 이어지는 항목만 넣었습니다.</p>
     <ul style="list-style:disc;padding-left:20px">
       <li style="margin-bottom:8px"><b>답은 세 칸뿐</b> — ○ 잘하고 있음 / △ 고쳐야 함 / ✕ 해당 없음. 응답은 자동 저장됩니다.</li>
-      <li style="margin-bottom:8px"><b>항목 선정</b> — 업종·직종을 고르면 그에 맞는 20개가 자동으로 선정됩니다. 작업자용 표와 픽토그램 카드는 항상 같은 20개입니다.</li>
+      <li style="margin-bottom:8px"><b>항목 선정</b> — 업종·직종을 고르면 그에 맞는 20개가 자동으로 선정됩니다. 작업자용 표와 외국인 노동자용 카드는 항상 같은 20개입니다.</li>
       <li style="margin-bottom:8px"><b>🌐 표시 언어</b> — 한국어·영어는 항상 나오고, 고른 언어가 카드에 함께 나옵니다.
         언어를 고르면 즉시 표시되고 다른 언어로 바꾸면 바로 바뀝니다 — 미리 번역된 내장 번역표를 쓰므로 기다림이 없습니다.</li>
       <li style="margin-bottom:8px"><b>🖨 인쇄</b> — 그림 + 여러 나라 말 + ○△✕ 칸이 있는 카드형 점검표로 인쇄합니다.
         「체크포인트(인쇄용) 생성」 메뉴에서도 같은 인쇄물을 뽑을 수 있습니다.</li>
       <li style="margin-bottom:8px" class="ai-only"><b>언어 고르기</b> — 「맞춤 업종·직종별 체크포인트 생성」 창의
-        <b>🌐 작업자용 픽토그램 체크리스트 언어</b>에서 고용허가제 송출국 16개 언어를 <b>여러 개</b> 고를 수 있습니다.
+        <b>🌐 외국인 노동자용 체크리스트 언어</b>에서 고용허가제 송출국 16개 언어를 <b>여러 개</b> 고를 수 있습니다.
         언어 표시는 미리 번역된 내장 번역표를 쓰므로 AI를 부르지 않고 즉시 나옵니다.
         고른 언어만 내보낸 파일에 담기므로 현장에 있는 나라 말만 고르면 파일이 가볍습니다.</li>
     </ul>
@@ -729,11 +729,11 @@ details.adv summary{cursor:pointer;font-size:.88rem;color:#4b5563;font-weight:60
   <div class="modal-body">
     <details id="lang-details" style="border:1px solid #e5e7eb;border-radius:8px;padding:10px 12px;background:#fff">
       <summary style="cursor:pointer;font-weight:600;color:#1e3a8a;font-size:.95rem;padding:2px 0">
-        🌐 작업자용 픽토그램 체크리스트 언어 <span class="mini" id="lang-summary" style="font-weight:400;color:#6b7280"></span>
+        🌐 외국인 노동자용 체크리스트 언어 <span class="mini" id="lang-summary" style="font-weight:400;color:#6b7280"></span>
       </summary>
       <p class="mini" style="margin:6px 0 2px;color:#475569">
         한국어·영어는 항상 들어갑니다. 현장에 있는 외국인 근로자의 언어를 <b>여러 개</b> 고르면
-        픽토그램 카드에 함께 인쇄됩니다. (고용허가제 송출국 16개 언어)<br>
+        외국인 노동자용 카드에 함께 인쇄됩니다. (고용허가제 송출국 16개 언어)<br>
         고른 언어는 <b>이 업종·직종의 표현으로 다시 쓴 문구를 그대로 번역</b>합니다.
         (예: “물건” → “철근다발”, “공구” → “그라인더”)<br>
         만들어 둔 언어는 다시 번역하지 않습니다. 번역에 실패하거나 AI를 쓸 수 없으면
@@ -806,7 +806,7 @@ details.adv summary{cursor:pointer;font-size:.88rem;color:#4b5563;font-weight:60
 <!-- 픽토그램 항목 관리 모달은 없앴다 — 작업자용 20 = 픽토그램 20 은 업종·직종에 따라
      자동 선정되며 임의로 바꿀 수 없다. 접속자가 고르는 것은 표시 언어뿐이다. -->
 <div id="pictoLangModal" class="modal"><div class="modal-content" style="max-width:560px">
-  <div class="modal-header"><h3>픽토그램 표시 언어</h3><button id="closePictoLangModal" class="modal-close">&times;</button></div>
+  <div class="modal-header"><h3>외국인 노동자용 표시 언어</h3><button id="closePictoLangModal" class="modal-close">&times;</button></div>
   <div class="modal-body">
     <p class="mini" style="margin:0 0 8px;color:#475569">
       한국어·영어는 항상 표시됩니다. 아래에서 고른 언어가 카드에 함께 나옵니다.<br>
@@ -1630,7 +1630,7 @@ function renderPicto() {
   /* 「항목이 없다」와 「검색에 걸린 게 없다」는 다른 상황이므로 안내도 달라야 한다 */
   empty.innerHTML = S.pictoIds.length
     ? '검색 결과가 없습니다.'
-    : '표시할 픽토그램 항목이 없습니다. 업종·직종을 먼저 적용해 주세요.';
+    : '표시할 외국인 노동자용 항목이 없습니다. 업종·직종을 먼저 적용해 주세요.';
   const done = S.pictoIds.filter(id => S.pictoAns.has(id)).length;
   const ls = activeLangs();
   /* 언어 이름 나열은 하지 않는다 — 16개를 다 고르면 헤더가 언어 목록으로 뒤덮였다 */
@@ -1796,9 +1796,9 @@ function printPicto(idsIn) {
   /* 화면에서 걸러 놓은 목록이 있으면 그대로 인쇄한다 — 보이는 것과 인쇄물이 달라지지 않게 */
   const ids = (idsIn && idsIn.length) ? idsIn
             : (S.view === 'picto' && PICTO_SHOWN.length ? PICTO_SHOWN : S.pictoIds);
-  if (!ids.length) { notify('인쇄할 픽토그램 항목이 없습니다.', 'error'); return; }
+  if (!ids.length) { notify('인쇄할 외국인 노동자용 항목이 없습니다.', 'error'); return; }
   const ls = activeLangs();
-  const title = `${S.industry || '일반'} - ${S.jobType || '범용'} 작업자용 안전점검표`;
+  const title = `${S.industry || '일반'} - ${S.jobType || '범용'} 외국인 노동자용 안전점검표`;
   /* 인쇄물도 화면과 같은 체크포인트 번호를 쓴다 */
   const cards = ids.map(id => cardHtml(id, SEQ.get(id) || id, { print: true, langs: ls })).join('');
   const w = window.open('', '_blank', 'height=880,width=900');
@@ -2011,7 +2011,7 @@ function buildReport(type) {
 }
 document.getElementById('generatePictoReportBtn').addEventListener('click', () => {
   hide('selectionReportModal');
-  if (!S.pictoIds.length) { notify('픽토그램 항목이 없습니다. 업종·직종을 먼저 적용해 주세요.', 'error'); return; }
+  if (!S.pictoIds.length) { notify('외국인 노동자용 항목이 없습니다. 업종·직종을 먼저 적용해 주세요.', 'error'); return; }
   printPicto();
 });
 document.getElementById('generateWorkerReportBtn').addEventListener('click', () => buildReport('worker'));
@@ -2567,7 +2567,7 @@ function previewSelection() {
   const wIds = selectWorkerPicto(ind, job, WP_TARGET);
   const ms = performance.now() - t0;
   $('pv-stat').innerHTML =
-    `관리자용 <b>${r.managerIds.length}</b>항목 · 작업자용 <b>${wIds.length}</b>항목(픽토그램) &nbsp;(${ms.toFixed(2)}ms)`;
+    `관리자용 <b>${r.managerIds.length}</b>항목 · 작업자용 <b>${wIds.length}</b>항목(외국인 노동자용) &nbsp;(${ms.toFixed(2)}ms)`;
 
   /* 9줄 표 대신 “어디에 비중을 뒀는지”를 먼저 보여준다 */
   const avg = CATS.reduce((a, c) => a + r.quota.manager[c] + r.quota.worker[c], 0) / CATS.length;
@@ -2633,7 +2633,7 @@ $('applyAiConfigBtn').addEventListener('click', async () => {
     let managerIds = sel.managerIds;
     /* ★ 작업자용은 AI를 부르지 않는다 — 그림이 있는 항목 안에서 업종·직종 규칙으로 즉시 고른다 */
     const workerIds = selectWorkerPicto(industry, jobType, WP_TARGET);
-    glog(`<b>✔</b> 선별 완료 (코드) — 관리자용 ${managerIds.length} / 작업자용 ${workerIds.length}(픽토그램) · ${(performance.now() - t0).toFixed(1)}ms`);
+    glog(`<b>✔</b> 선별 완료 (코드) — 관리자용 ${managerIds.length} / 작업자용 ${workerIds.length}(외국인 노동자용) · ${(performance.now() - t0).toFixed(1)}ms`);
 
     if (NOREWRITE) {
       const flat = {}; BASE.forEach(g => g.checkpoints.forEach(c => flat[c.id] = { t: c.text, i: c.ideas }));
