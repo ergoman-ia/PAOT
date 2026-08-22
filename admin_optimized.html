@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>공용 체크포인트 관리</title>
+<style>
+*{box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Malgun Gothic",sans-serif;background:#f3f4f6;margin:0;padding:24px;color:#111827;line-height:1.6}
+.wrap{max-width:980px;margin:0 auto}
+h1{font-size:1.6rem;color:#1e3a8a;margin:0 0 4px}
+.sub{color:#6b7280;font-size:.9rem;margin:0 0 22px}
+.card{background:#fff;border-radius:12px;padding:20px 22px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.card h2{font-size:1.05rem;margin:0 0 4px;color:#1e3a8a;display:flex;align-items:center;gap:8px}
+.card h2 i{background:#4f46e5;color:#fff;width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;font-style:normal;flex-shrink:0}
+.card p.hint{color:#6b7280;font-size:.85rem;margin:0 0 14px;padding-left:32px}
+table{width:100%;border-collapse:collapse;margin-top:14px;font-size:.88rem}
+th,td{border-bottom:1px solid #e5e7eb;padding:8px 10px;text-align:left}
+th{background:#f9fafb;font-weight:600;color:#374151}
+td.c,th.c{text-align:center}
+.tag{padding:2px 9px;border-radius:999px;font-size:.75rem;font-weight:700}
+.tag.auto{background:#dcfce7;color:#166534}
+.tag.same,.tag.seed{background:#f3f4f6;color:#6b7280}
+.btn{border:0;border-radius:8px;padding:10px 18px;font-size:.92rem;font-weight:600;cursor:pointer;background:#4f46e5;color:#fff}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.sec{background:#e5e7eb;color:#374151}
+.btn.danger{background:#ef4444;color:#fff}
+.btn.sm{padding:4px 10px;font-size:.8rem}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:14px}
+input[type=text],input[type=password]{padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:.9rem;width:100%}
+label{display:block;font-size:.85rem;font-weight:600;margin:10px 0 4px;color:#374151}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.log{background:#0f172a;color:#cbd5e1;border-radius:8px;padding:12px;font-family:ui-monospace,Menlo,monospace;font-size:.8rem;max-height:260px;overflow:auto;margin-top:14px;white-space:pre-wrap;line-height:1.7}
+.log b{color:#4ade80}.log s{color:#f87171;text-decoration:none}.log u{color:#fbbf24;text-decoration:none}
+.warn{background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px 14px;font-size:.85rem;color:#92400e;margin-top:12px}
+.okbox{background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;border-radius:8px;padding:12px 14px;font-size:.88rem;margin-top:12px}
+code{background:#f3f4f6;padding:1px 6px;border-radius:4px;font-size:.85em}
+.stat{display:flex;gap:22px;flex-wrap:wrap;margin-top:6px}
+.stat div{font-size:.85rem}.stat b{display:block;font-size:1.5rem;color:#1e3a8a;line-height:1.2}
+.hide{display:none !important}
+.modepill{display:inline-block;padding:3px 12px;border-radius:999px;font-size:.8rem;font-weight:700}
+.modepill.srv{background:#dcfce7;color:#166534}
+.modepill.stat2{background:#fee2e2;color:#991b1b}
+#mode{display:inline-flex;align-items:center;flex-wrap:wrap;gap:2px;max-width:100%}
+.modenote{font-size:.85rem;color:#6b7280;margin-left:8px}
+.modenote.bad{color:#b91c1c}
+.toastwrap{position:fixed;top:16px;right:16px;z-index:9999;display:flex;flex-direction:column;gap:8px;max-width:min(440px,92vw)}
+.toast{background:#1f2937;color:#e5e7eb;border-radius:8px;padding:10px 14px;font-size:.85rem;line-height:1.55;box-shadow:0 6px 18px rgba(0,0,0,.22);cursor:pointer;animation:tin .18s ease-out}
+.toast.ok{background:#065f46;color:#ecfdf5}
+.toast.err{background:#991b1b;color:#fef2f2}
+.toast code{background:rgba(255,255,255,.15);color:inherit}
+@keyframes tin{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>공용 체크포인트 관리</h1>
+  <p class="sub">산업안전보건교육원 교수실 전용 · 접속자에게 링크를 안내하지 마세요</p>
+
+  <!-- 0. 연결 -->
+  <div class="card">
+    <h2><i>0</i>연결 설정</h2>
+    <p class="hint">공용 서버(Apps Script) 주소를 넣으면 서버를 직접 관리합니다. 비워 두면 접수 파일을 GitHub에 올리는 방식으로 동작합니다.<br>
+      <b>주소와 토큰은 이 브라우저 어디에도 저장되지 않습니다.</b> 화면을 닫거나 새로고침하면 사라지므로 매번 다시 입력해야 합니다 — 공용 PC 보호를 위한 의도된 동작입니다.</p>
+    <div class="grid2">
+      <div><label for="api">공용 서버 주소 (Apps Script /exec)</label><input type="text" id="api" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off" name="erg-api-url-nofill"></div>
+      <div><label for="atoken">관리자 토큰 (ADMIN_TOKEN)</label><input type="password" id="atoken" placeholder="스크립트 속성에 넣은 값" autocomplete="new-password" name="erg-admin-token-nofill"></div>
+    </div>
+    <div class="row">
+      <button class="btn" id="connect">연결 확인</button>
+      <button class="btn sec" id="wipekeys" title="예전 버전이 이 브라우저(localStorage/sessionStorage)에 남겼을 수 있는 서버 주소·토큰을 찾아 삭제합니다">🧹 저장 키 삭제</button>
+      <button class="btn danger" id="logout">🔓 로그아웃</button>
+      <span id="mode"></span>
+    </div>
+  </div>
+
+  <!-- 1. 현황 -->
+  <div class="card">
+    <h2><i>1</i>현재 공용 목록</h2>
+    <p class="hint" id="src-note">모든 접속자가 쓰고 있는 자료입니다.</p>
+    <div class="okbox" style="margin:0 0 14px 32px">
+      <b>원본은 구글 드라이브 <code>ergonomic-checkpoints-data</code> 폴더입니다.</b><br>
+      백업 ZIP은 이 폴더와 <b>파일 이름·내용이 똑같습니다.</b> 압축을 풀어 그대로 되올리면 복구됩니다.<br>
+      <span style="color:#6b7280">‘오늘 생성 N회’는 서버가 센 생성 실행 횟수입니다. 삭제하거나 같은 직종을 다시 만들어도 줄지 않아
+      등록 건수와 다를 수 있으며, 자정(서울 기준)에 0으로 초기화됩니다.</span>
+    </div>
+    <div class="stat">
+      <div><b id="stat-n">–</b>등록 직종</div>
+      <div><b id="stat-ind">–</b>업종</div>
+      <div><b id="stat-upd">–</b>마지막 갱신</div>
+      <div><b id="stat-today">–</b>오늘 신규 등록<span id="stat-today-note" class="hint" style="display:block;font-size:.72rem;margin-top:2px"></span></div>
+    </div>
+    <div class="row">
+      <button class="btn sec" id="reload">새로고침</button>
+      <button class="btn" id="backup" disabled>📦 전체 백업 (ZIP) 내려받기</button>
+    </div>
+  </div>
+
+  <!-- 4. 목록 관리 -->
+  <div class="card">
+    <h2><i>2</i>등록된 직종 관리</h2>
+    <p class="hint" id="mgr-note">품질에 문제가 있는 항목을 삭제합니다.</p>
+    <input type="text" id="filter" placeholder="🔍 업종 또는 직종 검색">
+    <div id="list"></div>
+  </div>
+
+  <div class="toastwrap" id="toasts"></div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+const nrm = s => (s||'').normalize('NFC').trim().toLowerCase().replace(/[\s()\[\]{}·・,.\/\\\-_]+/g,'');
+const catKey = (i,j) => nrm(i)+'::'+nrm(j);
+function slug(i,j){                       // 앱·서버와 동일한 FNV-1a
+  const t = catKey(i,j); let h = 0x811c9dc5;
+  for(let n=0;n<t.length;n++){ const c=t.charCodeAt(n);
+    h ^= (c<256 ? (c&255) : ((c&255)^(c>>8))); h = Math.imul(h,0x01000193)>>>0; }
+  return 'cp-'+h.toString(16).padStart(8,'0');
+}
+/* 서버가 Asia/Seoul 기준으로 날짜를 쓰므로 여기서도 같은 기준을 쓴다.
+   UTC(toISOString)를 쓰면 새벽 0~9시에 하루가 어긋난다. */
+const today = () => new Intl.DateTimeFormat('sv-SE', { timeZone:'Asia/Seoul' }).format(new Date());
+/* ★★ 보안 — 서버 주소·관리자 토큰은 이 브라우저 어디에도 저장하지 않는다 ★★
+   공용 PC의 localStorage 에 남으면 누구든 개발자 도구로 꺼낼 수 있다.
+   · 값은 오직 입력창(메모리)에만 존재한다. 새로고침·창 닫기와 함께 사라진다.
+   · index.html 의 관리자 인증을 거쳐 넘어온 경우, sessionStorage 의 1회용 인계값
+     (ergAdminHandoff)을 읽는 "즉시" 지운다.
+   · 예전 버전이 남겨 둔 localStorage 의 ergAdminCfg(주소+토큰)도 발견 즉시 삭제한다. */
+const CFG = 'ergAdminCfg';                 // (구버전이 쓰던 저장 키 — 이제 청소 대상일 뿐)
+const HANDOFF = 'ergAdminHandoff';         // index.html → admin.html 1회용 인계 키
+const WARM = 'ergSrvWarm';                 // 서버를 방금 깨웠다는 표시 (index.html 이 남긴다)
+/** 60초 안에 서버와 통신한 기록이 있으면 «깨어 있음»으로 보고 대기 시간을 짧게 잡는다 */
+function warmRecently(){
+  try{ return Date.now() - Number(sessionStorage.getItem(WARM) || 0) < 60000; }catch(e){ return false; }
+}
+function markWarm(){ try{ sessionStorage.setItem(WARM, String(Date.now())); }catch(e){} }
+
+let SRV = false;                                   // 서버 모드 여부
+let AUTH = false;                                  // ADMIN_TOKEN 이 서버에서 확인된 경우에만 true
+let catalog = { version:4, updated:today(), items:[] };
+let QUOTA = null;   // 서버의 오늘 생성 호출 카운터
+
+/* 화면 아래 로그 상자는 없앴다 — 눈에 띄지 않아 아무도 보지 않았다.
+   대신 결과는 오른쪽 위 알림으로 잠깐 띄우고, 연결 상태는 「연결 확인」 옆에만 적는다. */
+function log(html){
+  const raw = String(html);
+  try { console.info(raw.replace(/<[^>]*>/g,'')); } catch(e){}
+  const type = /<s>✖<\/s>/.test(raw) ? 'err' : /<b>✔<\/b>/.test(raw) ? 'ok' : '';
+  const body = raw.replace(/<s>✖<\/s>|<b>✔<\/b>|<u>ⓘ<\/u>|<u>▶<\/u>/g,'').trim();
+  const box = $('toasts'); if(!box) return;
+  const el = document.createElement('div');
+  el.className = 'toast' + (type ? ' '+type : '');
+  el.innerHTML = body;
+  el.addEventListener('click', ()=> el.remove());
+  box.appendChild(el);
+  setTimeout(()=> el.remove(), type==='err' ? 9000 : 6000);
+}
+/** 연결 상태는 오직 이 자리에만 표시한다 (연결됨 → 서버 모드 : … / 안 됨 → 연결 안 됨 : 이유) */
+function setMode(ok, detail){
+  $('mode').innerHTML = ok
+    ? `<span class="modepill srv">서버 모드</span><span class="modenote">: ${detail}</span>`
+    : `<span class="modepill stat2">연결 안 됨</span><span class="modenote bad">: ${detail}</span>`;
+}
+
+/** 이 브라우저에 남아 있(을 수 있)는 서버 주소·토큰을 모두 삭제하고, 지운 내역을 돌려준다 */
+function purgeStoredSecrets(){
+  const removed = [];
+  [[localStorage,'localStorage'],[sessionStorage,'sessionStorage']].forEach(([st,label])=>{
+    [CFG,HANDOFF].forEach(k=>{
+      try{ if(st.getItem(k)!==null){ st.removeItem(k); removed.push(label+' → '+k); } }catch(e){}
+    });
+  });
+  return removed;
+}
+
+/* 첫 로드: ① 1회용 인계값이 있으면 입력창에 옮기고 그 즉시 지운다
+           ② 구버전이 남긴 저장값이 있으면 마지막으로 한 번 복원해 주고 곧바로 삭제한다
+              (관리자가 갑자기 접속이 끊긴 줄 알고 당황하지 않도록) */
+(function restoreOnce(){
+  let c = null;
+  try{
+    const raw = sessionStorage.getItem(HANDOFF);
+    if(raw){ sessionStorage.removeItem(HANDOFF); c = JSON.parse(raw); }   // 읽는 즉시 삭제
+  }catch(e){}
+  if(!c){
+    try{ const raw = localStorage.getItem(CFG); if(raw) c = JSON.parse(raw); }catch(e){}
+  }
+  const removed = purgeStoredSecrets();                                    // 어떤 경우든 저장소는 비운다
+  if(c){
+    HANDOFF_STATE = c;
+    if(c.api) $('api').value = String(c.api); if(c.atoken) $('atoken').value = String(c.atoken);
+    /* index.html 이 토큰을 확인한 직후 넘겨준 것 — 서버가 지금 깨어 있다는 뜻이다 */
+    if(c.warm) try{ sessionStorage.setItem(WARM, String(c.warm)); }catch(e){}
+    /* 미리 받은 목록으로 표를 즉시 그린다 — 서버 목록이 도착하면 그대로 대체된다 */
+    if(Array.isArray(c.items) && c.items.length) catalog = { version:4, updated:'…', items:c.items };
+  }
+  if(removed.length)
+    log(`<u>ⓘ</u> 보안 청소 — 이 브라우저에 저장돼 있던 접속 정보 ${removed.length}건을 삭제했습니다 (${removed.map(esc).join(', ')}). 앞으로는 어디에도 저장되지 않습니다.`);
+})();
+
+/* 「저장 키 삭제」 — 언제든 눌러 이 브라우저의 잔존 접속 정보를 확인·삭제한다 */
+$('wipekeys').addEventListener('click',()=>{
+  const removed = purgeStoredSecrets();
+  log(removed.length
+    ? `<b>✔</b> 저장돼 있던 접속 정보 ${removed.length}건을 삭제했습니다 — ${removed.map(esc).join(', ')}`
+    : '<b>✔</b> 이 브라우저에 저장된 서버 주소·토큰이 없습니다. (지금 입력창의 값은 저장된 것이 아니라 화면을 닫으면 사라집니다)');
+});
+
+$('logout').addEventListener('click',()=>{
+  if(!confirm('관리자 모드에서 로그아웃합니다.')) return;
+  purgeStoredSecrets();
+  ['api','atoken'].forEach(k=>$(k).value='');
+  SRV=false; catalog={version:4,updated:'–',items:[]};
+  location.href='index.html';
+});
+
+/*──────── 서버 통신 ────────*/
+/* 주소 정규화 — 붙여넣기 실수로 인한 오류를 미리 막는다.
+   특히 "https://" 를 빠뜨리면 브라우저가 상대경로로 해석해 이 사이트의 HTML 페이지를
+   받아오고, 그 결과 JSON 파싱이 "Unexpected token '<'" 로 실패한다. */
+function apiUrl(){
+  let u = $('api').value.trim();
+  if(!u) return '';
+  u = u.replace(/[?#].*$/, '').replace(/\s+/g,'');       // 쿼리·앵커·공백 제거
+  if(!/^https?:\/\//i.test(u)) u = 'https://' + u.replace(/^\/+/, '');
+  u = u.replace(/\/+$/,'');                              // 끝 슬래시 제거
+  return u;
+}
+/** 응답이 정말 JSON인지 확인하고, 아니면 원인을 알려준다 */
+async function asJson(res, where){
+  const text = await res.text();
+  const head = text.slice(0, 200).trim();
+  if(/^\s*</.test(head)){                                // JSON 이 아니라 HTML 이 왔다
+    let why;
+    if(/accounts\.google\.com|로그인|Sign in|Google 계정/i.test(text))
+      why = '구글 로그인 페이지가 돌아왔습니다 — 웹앱 배포의 「액세스 권한이 있는 사용자」를 <b>모든 사용자</b>로 바꿔 주세요.';
+    else if(res.status === 404 || /페이지를 찾을 수 없|not found|찾을 수 없습니다/i.test(text))
+      why = '해당 주소에 배포된 웹앱이 없습니다 — Apps Script의 「배포 관리」에서 현재 활성 배포의 /exec 주소를 다시 복사해 주세요.';
+    else if(!/script\.google(usercontent)?\.com/.test(res.url || ''))
+      why = '입력한 주소가 이 사이트 안의 페이지로 해석되었습니다 — 주소가 <b>https://script.google.com/macros/s/…/exec</b> 형식인지 확인해 주세요.';
+    else
+      why = '서버가 JSON 대신 오류 페이지를 보냈습니다 — 잠시 뒤 다시 시도하거나 배포 상태를 확인해 주세요.';
+    throw new Error(`${where} 응답이 올바르지 않습니다 (HTTP ${res.status}). ${why}`);
+  }
+  try { return JSON.parse(text); }
+  catch(e){ throw new Error(`${where} 응답을 해석할 수 없습니다: ${head.slice(0,80)}`); }
+}
+/* ── 시간제한 + 자동 재시도 ──────────────────────────────
+   앱스 스크립트는 잠들어 있다가 첫 요청에서 깨어난다(콜드스타트). 이때
+   ① 응답이 수십 초 늦거나 ② JSON 대신 구글의 임시 오류 페이지(HTML)가 오는 일이 있다.
+   예전 코드는 시간제한이 없어 한 번 늘어지면 화면이 계속 「확인 중…」에 머물렀고,
+   임시 오류 페이지 한 번에 곧바로 「연결 안 됨」으로 끝났다.
+   → 짧게 끊고 여러 번 두드린다. 깨어난 뒤에는 대개 두 번째 시도에서 바로 붙는다. */
+/** 한 번의 요청 — ms 안에 답이 없으면 끊는다 */
+async function once(url, opt, ms){
+  const ctl = new AbortController();
+  const timer = setTimeout(()=>ctl.abort(), ms);
+  try{ return await fetch(url, Object.assign({ redirect:'follow', signal: ctl.signal }, opt || {})); }
+  finally{ clearTimeout(timer); }
+}
+/** 재시도까지 포함한 요청. 일시적인 실패(시간초과·네트워크·HTML 오류 페이지·5xx)는 다시 두드린다. */
+async function ask(url, opt, where, cfg){
+  const c = Object.assign({ tries: 3, ms: warmRecently() ? 9000 : 15000, step: 900 }, cfg || {});
+  let last = null;
+  for(let i = 0; i < c.tries; i++){
+    try{
+      const res = await once(url, opt, c.ms + i * 4000);        // 시도할수록 조금 더 기다려 준다
+      const out = await asJson(res, where);                     // HTML 이면 여기서 예외
+      markWarm();
+      return out;
+    }catch(e){
+      last = e;
+      const retriable = /시간|abort|Abort|Failed to fetch|NetworkError|올바르지 않습니다|해석할 수 없습니다|HTTP 5\d\d/.test(e.message || '');
+      if(!retriable || i === c.tries - 1) break;
+      if(cfg && cfg.onRetry) cfg.onRetry(i + 1);
+      await new Promise(r=>setTimeout(r, c.step * (i + 1)));    // 0.9초 → 1.8초
+    }
+  }
+  throw last || new Error(where + ' 응답 없음');
+}
+async function getJson(path, where, cfg){
+  const base = apiUrl();
+  if(!base) throw new Error('서버 주소가 비어 있습니다.');
+  return ask(base + path, null, where, cfg);
+}
+async function post(body, cfg){
+  const base = apiUrl();
+  if(!base) throw new Error('서버 주소가 비어 있습니다.');
+  return ask(base, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+                     body: JSON.stringify(body) }, '서버', cfg);
+}
+const adm = (op, extra={}, cfg) => post({ action:'admin', token:$('atoken').value.trim(), op, ...extra }, cfg);
+
+/*──────── 목록 표시 도우미 ────────*/
+let FRESH_AT = null;      // 드라이브 «원본»으로 마지막 확인한 시각
+let STORE_MSG = '';       // 저장소 점검(드라이브↔Firestore) 결과 — 토스트와 달리 계속 남는다
+
+/* 서버가 준 목록을 화면에 반영한다 */
+function applyList(items){
+  catalog.items = items || [];
+  renderStats(); renderList();
+}
+/** 지금 보고 있는 목록이 «원본 기준인지»를 항상 적어 둔다 —
+    관리자가 캐시나 옛 목록을 전부라고 오해하지 않게 하기 위한 것이다. */
+function setFreshNote(msg, bad){
+  const el = $('src-note');
+  const base = SRV ? '구글 드라이브 ergonomic-checkpoints-data 폴더에 저장되어 모든 접속자가 실시간으로 쓰고 있는 자료입니다.'
+                   : '서버에 연결되면 등록 현황이 표시됩니다.';
+  const tail = msg ? ` <b style="color:${bad?'#dc2626':'#b45309'}">· ${msg}</b>`
+             : (FRESH_AT ? ` <span style="color:#16a34a">· 원본 확인 완료 ${FRESH_AT.toTimeString().slice(0,8)}</span>` : '');
+  el.innerHTML = base + tail + (STORE_MSG ? `<br>${STORE_MSG}` : '');
+}
+/** 화면 마무리 — 버튼·안내문을 지금 상태에 맞춘다 */
+function paintState(){
+  $('backup').disabled = !(SRV && AUTH);
+  $('backup').title = (SRV && AUTH) ? '구글 드라이브의 자료 전체를 ZIP으로 내려받습니다'
+                    : SRV ? '관리자 토큰이 확인되지 않았습니다' : '먼저 서버에 연결하세요';
+  setFreshNote('');
+  $('mgr-note').innerHTML = '삭제를 누르면 <b>즉시 서버에서 삭제</b>되어 접속자에게 바로 반영됩니다.';
+  renderStats(); renderList();
+}
+
+/*──────── 부팅 ────────
+  ★ 왕복을 한 번으로 줄였다.
+    예전에는 ping(GET) → 목록(POST) → 원본 대조(POST) 로 세 번을 오갔다. 앱스 스크립트는
+    요청마다 리다이렉트 왕복과 실행 준비가 붙어, 왕복 수가 그대로 체감 대기시간이 됐다.
+    이제 op:'boot' 한 번으로 상태·목록(원본)·오늘 생성 기록을 함께 받는다.
+    구버전 서버이거나 토큰이 없을 때만 예전 방식(ping + catalog)으로 돌아간다. */
+let HANDOFF_STATE = null;
+let BOOTING = false, KEYNOTE = '';
+async function boot(){
+  if(BOOTING) return;
+  BOOTING = true;
+  const url = apiUrl();
+  if(url && url !== $('api').value.trim()) $('api').value = url;
+  SRV = false; AUTH = false; FRESH_AT = null;
+  let why = '';
+  setMode(false, warmRecently() ? '연결 확인 중…' : '서버에 연결하는 중… (처음이면 5~10초)');
+  if(!url){
+    BOOTING = false;
+    setMode(false, '서버 주소를 입력한 뒤 「연결 확인」을 눌러 주세요');
+    QUOTA = null; catalog = { version:4, updated:'–', items:[] };
+    paintState(); return;
+  }
+
+  /* ★ index.html에서 이미 fastboot로 인증·목록을 받았다면 서버를 다시 호출하지 않는다. */
+  if(HANDOFF_STATE && HANDOFF_STATE.verified && Array.isArray(HANDOFF_STATE.items)){
+    SRV = true; AUTH = true; FRESH_AT = new Date();
+    KEYNOTE = HANDOFF_STATE.keyReady ? 'Gemini 키 설정됨' : '⚠ 서버에 GEMINI_KEY 없음';
+    QUOTA = { used: Number(HANDOFF_STATE.today || 0), limit: Number(HANDOFF_STATE.limit || 0) };
+    catalog = { version:4, updated:HANDOFF_STATE.updated || today(), items:HANDOFF_STATE.items };
+    paintState();
+    setMode(true, `${KEYNOTE} · 오늘 생성 ${QUOTA.used}회`);
+    const store = HANDOFF_STATE.store;
+    HANDOFF_STATE = null;
+    /* 정확성 확인은 화면이 뜬 뒤 한 번만, 백그라운드에서 수행한다. */
+    if(store && store.fsCount != null && store.fsCount !== catalog.items.length){
+      setTimeout(() => reportStore({
+        items: catalog.items,
+        store: store,
+        todayLog: []
+      }), 250);
+    } else {
+      setTimeout(() => reportStoreFast(), 500);
+    }
+    BOOTING = false;
+    return;
+  }
+
+  const tell = n => setMode(false, `서버 응답을 기다리는 중 — 재시도 ${n}회…`);
+  let b = null;
+  if($('atoken').value.trim()){
+    /* ★ 직접 들어온 관리자 화면은 fastboot 1회만 호출한다. */
+    b = await adm('fastboot', {}, { onRetry: tell }).catch(e => ({ ok:false, _err:e.message }));
+  }
+  if(b && b.ok){
+    SRV = true; AUTH = true; markWarm(); FRESH_AT = new Date();
+    KEYNOTE = b.keyReady ? 'Gemini 키 설정됨' : '⚠ 서버에 GEMINI_KEY 없음';
+    QUOTA = { used: b.today, limit: b.limit };
+    catalog = { version:4, updated:b.updated, items:b.items || [] };
+    paintState();
+    setMode(true, `${KEYNOTE} · 오늘 생성 ${b.today}회`);
+    setTimeout(() => reportStore(b), 350);
+    BOOTING = false; return;
+  }
+
+  /* 구버전 서버 fallback */
+  const bootErr = (b && (b._err || b.error)) || '';
+  const p = await getJson('?action=ping', '서버', { onRetry: tell }).catch(e => ({ ok:false, _err:e.message }));
+  if(p && p.ok){
+    SRV = true; markWarm();
+    KEYNOTE = p.keyReady ? 'Gemini 키 설정됨' : '⚠ 서버에 GEMINI_KEY 없음';
+    QUOTA = { used: p.today, limit: p.limit };
+    catalog = { version:4, updated:p.updated, items:[] };
+    if($('atoken').value.trim()){
+      const l = await adm('list', { fresh:true }, { tries:1, ms:10000 }).catch(()=>null);
+      if(l && l.ok){ AUTH = true; FRESH_AT = new Date(); applyList(l.items); }
+    }
+    if(!AUTH){
+      try{
+        const c = await getJson('?action=catalog', '카탈로그', { tries:1, ms:10000 });
+        if(c && c.ok) applyList(c.items);
+      }catch(e){}
+    }
+    const sb = p.build || '';
+    STORE_MSG = !sb
+      ? `<b style="color:#dc2626">⚠ 서버 코드가 구버전입니다(빌드 표식 없음). 기존 배포를 최신 코드로 올려 주세요.</b>`
+      : !AUTH
+      ? `<b style="color:#dc2626">⚠ 관리자 인증이 실패했습니다 — 토큰을 확인하세요.</b>`
+      : `<b style="color:#b45309">⚠ fastboot 연결에 실패했습니다: ${esc(bootErr || '알 수 없음')}</b>`;
+    setFreshNote('', false);
+    setMode(true, `${KEYNOTE} · 오늘 생성 ${p.today}회` + (AUTH ? '' : ' · <b>토큰 불일치 — 삭제·백업 잠김</b>'));
+  } else {
+    why = bootErr || (p && p._err) || '서버가 응답하지 않습니다';
+    setMode(false, why);
+    QUOTA = null; catalog = { version:4, updated:'–', items:[] };
+  }
+  paintState();
+  BOOTING = false;
+}
+
+/** 관리자 화면이 빨리 뜬 뒤 저장소 일치 여부만 가볍게 확인한다. */
+async function reportStoreFast(){
+  try{
+    const r = await adm('storecheck', {}, { tries:1, ms:15000 });
+    if(r && r.ok){
+      if(r.inSync) STORE_MSG = `<span style="color:#16a34a">저장소 점검 — 드라이브 ${r.drive}건 = Firestore ${r.fs}건 (일치)</span>`;
+      else STORE_MSG = `<span style="color:#b45309">저장소 점검 — 동기화 보정 ${r.synced || 0}건 수행</span>`;
+      setFreshNote('', false);
+    }
+  }catch(e){}
+}
+
+/** 오늘 서버가 생성한 기록과 실제 목록을 맞춰 본다 —
+    「오늘 생성 1회로 나오는데 목록에는 없다」의 원인을 화면에서 바로 알 수 있게 한다. */
+/** 저장소 진단 — ① 폴더·카탈로그 중복 ② 드라이브 ↔ Firestore(접속자 목록) 건수 차이 */
+async function reportStore(b){
+  /* ★ Firestore 미러가 뒤처진 경우 — 접속자 화면은 Firestore 를 먼저 읽으므로,
+     여기가 어긋나면 «방금 생성한 자료가 접속자 목록에 안 보이는» 증상이 된다.
+     발견 즉시 드라이브 전체를 Firestore 로 다시 밀어 넣어 맞춘다(fssync). */
+  const drive = (b.items || []).length;
+  const fs = (b.store && 'fsCount' in b.store) ? b.store.fsCount : undefined;
+  const say = (html, bad) => { STORE_MSG = html; setFreshNote('', false); if(bad) log(html); };
+  if(fs === undefined){
+    /* store 자체가 없다 = 구버전 Code.gs — 점검이 아예 못 돈 것 */
+    say(`<b style="color:#dc2626">⚠ 저장소 점검 불가 — 서버(Code.gs)가 구버전입니다. 재배포가 필요합니다.</b>`, true);
+  } else if(fs === null){
+    say(`<span style="color:#b45309">저장소 점검 — Firestore 미러가 꺼져 있거나(FB_PROJECT 없음) 읽지 못했습니다. 접속자 목록이 느린 경로로 동작 중일 수 있습니다.</span>`);
+  } else if(fs !== drive){
+    say(`<b style="color:#dc2626">⚠ 저장소 불일치 — 드라이브 ${drive}건 · 접속자 목록(Firestore) ${fs}건 · 부족분 ${Math.abs(drive-fs)}건 채우는 중…</b>`, true);
+    const tSync = Date.now();
+    try{
+      /* 기본은 «부족분만» 올린다 — 전체 이관은 자료 수만큼 쓰기가 일어나 수십 초가 걸린다 */
+      const r = await adm('fssync', {}, { tries:1, ms:120000 });
+      const secs = ((Date.now()-tSync)/1000).toFixed(1);
+      if(r && r.ok) say(`<b style="color:#16a34a">✔ Firestore 동기화 완료 — 새로 올린 자료 ${r.synced}건 · 전체 ${r.total}건 · ${secs}초</b>`, true);
+      else say(`<b style="color:#dc2626">✖ Firestore 동기화 실패: ${esc((r && (r.error || (r.failed||[]).join(', '))) || '알 수 없음')}</b>`, true);
+    }catch(e){ say(`<b style="color:#dc2626">✖ Firestore 동기화 실패: ${esc(e.message)}</b>`, true); }
+  } else {
+    say(`<span style="color:#16a34a">저장소 점검 — 드라이브 ${drive}건 = 접속자 목록(Firestore) ${fs}건 (일치)</span>`);
+  }
+  const d = b.store && b.store.dupes;
+  if(!d) return;
+  if(d.folders > 1)
+    log(`<s>⚠</s> 드라이브에 <b>같은 이름의 폴더가 ${d.folders}개</b> 있습니다 — 자료가 가장 많은 폴더를 «진짜»로 고정했습니다 `
+      + `<span class="hint">(폴더 id ${esc(b.store.folderId)}). 나머지 폴더는 드라이브에서 직접 이름을 바꾸거나 지워 주세요.</span>`);
+  if(d.catalog > 1){
+    log(`<s>⚠</s> <b>catalog.json 이 ${d.catalog}개</b> 있습니다 — 생성 실행과 관리 화면이 서로 다른 파일을 보고 있었을 수 있습니다. `
+      + `<span class="hint">가장 최근 파일만 남기고 정리합니다…</span>`);
+    try{
+      const r = await adm('fixdupes', {}, { tries:1, ms:60000 });
+      if(r && r.ok && r.removed){
+        log(`<b>✔</b> 중복 catalog.json ${r.removed}개를 휴지통으로 옮기고 최신본만 남겼습니다 — 목록을 다시 읽습니다`);
+        const f = await adm('boot', {}, { tries:1 });
+        if(f && f.ok){ FRESH_AT = new Date(); applyList(f.items); setFreshNote(''); }
+      }
+    }catch(e){ log('<s>✖</s> 중복 정리 실패: '+esc(e.message)); }
+  }
+}
+
+function reportTodayLog(b){
+  const lg = b.todayLog || [];
+  const missing = lg.filter(x => !x.listed);
+  if(missing.length){
+    log('<s>⚠</s> 오늘 서버가 생성한 기록 ' + lg.length + '건 중 <b>' + missing.length + '건이 목록에 없습니다</b> — '
+      + missing.map(x=>esc(x.i)+' / '+esc(x.j)).join(', ')
+      + ' <span class="hint">(생성 뒤 삭제되었거나, 카탈로그 저장이 끊긴 경우입니다. 같은 업종·직종으로 다시 생성하면 채워집니다)</span>');
+  }
+  if(typeof b.today === 'number' && typeof b.todayListed === 'number' && b.today !== b.todayListed && !missing.length){
+    log('<u>ⓘ</u> 오늘 생성 횟수 ' + b.today + '회 · 목록에 남은 오늘 등록 ' + b.todayListed + '건 — '
+      + '차이는 <b>이미 있던 업종·직종을 다시 만들었거나(덮어쓰기), 만든 뒤 삭제한 경우</b>입니다.');
+  }
+}
+
+/* 「새로고침」은 캐시를 건너뛰고 드라이브 원본을 읽는다 */
+$('reload').addEventListener('click', async () => {
+  FRESH_AT = null;
+  if(!SRV || !AUTH) return boot();
+  setFreshNote('원본을 다시 읽는 중…');
+  try{
+    const f = await adm('list', { fresh:true }, { tries:2 });
+    if(f && f.ok){ FRESH_AT = new Date(); applyList(f.items); setFreshNote('');
+                   log(`<b>✔</b> 원본에서 ${f.items.length}건을 다시 읽었습니다`); }
+    else boot();
+  }catch(e){ boot(); }
+});
+
+function renderStats(){
+  $('stat-n').textContent = catalog.items.length;
+  $('stat-ind').textContent = new Set(catalog.items.map(x=>x.i)).size;
+  $('stat-upd').textContent = catalog.updated || '–';
+
+  /* 등록일이 오늘인 항목을 직접 센다. 서버 카운터는 생성 호출 횟수라
+     삭제하거나 같은 직종을 다시 만들면 실제 등록 건수와 어긋난다. */
+  const t = today();
+  const n = catalog.items.filter(x => x.d === t).length;
+  $('stat-today').textContent = SRV ? n : '–';
+  const note = $('stat-today-note');
+  if(!SRV){ note.textContent = ''; return; }
+  if(QUOTA && QUOTA.used !== n)
+    note.textContent = `오늘 생성 ${QUOTA.used}회 (삭제 포함)`;
+  else if(QUOTA)
+    note.textContent = `오늘 생성 ${QUOTA.used}회`;
+  else note.textContent = '';
+}
+function renderList(){
+  const q = nrm($('filter').value);
+  /* 최신 등록이 위로 오도록 등록일 내림차순 정렬하고, 연번은 전체 기준으로 매긴다.
+     23건이면 맨 위가 23번. 검색해도 번호가 바뀌지 않도록 정렬·번호를 먼저 부여한 뒤 거른다. */
+  const sorted = catalog.items.slice().sort((a,b)=>{
+    const d = String(b.d||'').localeCompare(String(a.d||''));
+    return d || String(b.i+b.j).localeCompare(String(a.i+a.j), 'ko');
+  });
+  const total = sorted.length;
+  const numbered = sorted.map((x,i)=>({ ...x, no: total - i }));
+  const items = numbered.filter(x => !q || x.k.includes(q));
+
+  const today_ = today();
+  $('list').innerHTML = !items.length ? '<p class="hint" style="padding:14px 0 0">항목이 없습니다.</p>' :
+    `<table><thead><tr><th class="c" style="width:52px">연번</th><th>업종</th><th>직종</th><th class="c">출처</th><th class="c">등록일</th><th class="c">관리</th></tr></thead><tbody>${
+      items.map(x=>`<tr>
+        <td class="c" style="color:#6b7280">${x.no}</td>
+        <td>${esc(x.i)}</td><td><b>${esc(x.j)}</b></td>
+        <td class="c"><span class="tag ${x.s==='seed'?'seed':'auto'}">${x.s==='seed'?'기본':(x.s==='auto'?'자동':'이관')}</span></td>
+        <td class="c">${esc(x.d||'-')}${x.d===today_?' <span class="tag auto" style="margin-left:4px">오늘</span>':''}</td>
+        <td class="c"><button class="btn danger sm" data-rm="${esc(x.k)}">삭제</button></td></tr>`).join('')}</tbody></table>`
+    + (q ? `<p class="hint" style="padding:8px 0 0">검색 결과 ${items.length}건 / 전체 ${total}건 — 연번은 전체 기준입니다.</p>` : '');
+}
+$('filter').addEventListener('input', renderList);
+$('list').addEventListener('click', async e=>{
+  const b=e.target.closest('button'); if(!b || !b.dataset.rm) return;
+  if(!SRV){ log('<s>✖</s> 서버에 연결되어 있지 않습니다.'); return; }
+  const ent = catalog.items.find(x=>x.k===b.dataset.rm); if(!ent) return;
+  if(!confirm(`'${ent.i} / ${ent.j}' 를 서버에서 삭제합니다. 접속자에게 즉시 반영됩니다.`)) return;
+  b.disabled=true; b.textContent='삭제 중…';
+  try{ const r = await adm('delete',{keys:[b.dataset.rm]}, { tries:1, ms:60000 });
+    if(!r.ok) throw new Error(r.error);
+    log(`<b>✔</b> ${esc(ent.i)} / ${esc(ent.j)} 삭제 완료`);
+    /* 삭제 뒤에는 캐시가 아니라 드라이브 원본을 읽어 그린다 */
+    try{ const f = await adm('list', { fresh:true }, { tries:2 });
+         if(f && f.ok){ FRESH_AT = new Date(); applyList(f.items); setFreshNote(''); } else await boot(); }
+    catch(e){ await boot(); }
+  }catch(err){ log('<s>✖</s> 삭제 실패: '+esc(err.message)); b.disabled=false; b.textContent='삭제'; }
+});
+
+/*──────── 서버 전용 기능 ────────*/
+/*──────── ZIP 생성 (외부 라이브러리 없음) ────────*/
+const CRC_T = (() => { const t = new Uint32Array(256);
+  for (let n=0;n<256;n++){ let c=n; for(let k=0;k<8;k++) c = c&1 ? 0xEDB88320 ^ (c>>>1) : c>>>1; t[n]=c>>>0; }
+  return t; })();
+function crc32(u8){ let c=0xFFFFFFFF; for(let i=0;i<u8.length;i++) c = CRC_T[(c^u8[i])&255] ^ (c>>>8); return (c^0xFFFFFFFF)>>>0; }
+async function deflateRaw(u8){
+  if(typeof CompressionStream==='undefined') return null;
+  try{ const st = new Blob([u8]).stream().pipeThrough(new CompressionStream('deflate-raw'));
+       return new Uint8Array(await new Response(st).arrayBuffer()); }catch(e){ return null; }
+}
+/** files:[{name,text}] → 표준 ZIP Blob (deflate, 미지원 브라우저는 무압축) */
+async function makeZip(files){
+  const enc=new TextEncoder(), parts=[], dir=[], n=new Date();
+  const dTime=(n.getHours()<<11)|(n.getMinutes()<<5)|(n.getSeconds()>>1);
+  const dDate=((n.getFullYear()-1980)<<9)|((n.getMonth()+1)<<5)|n.getDate();
+  let off=0;
+  for(const f of files){
+    const nb=enc.encode(f.name), raw=enc.encode(f.text), crc=crc32(raw);
+    let data=await deflateRaw(raw), method=8;
+    if(!data || data.length>=raw.length){ data=raw; method=0; }
+    const h=new DataView(new ArrayBuffer(30));
+    h.setUint32(0,0x04034b50,true); h.setUint16(4,20,true); h.setUint16(6,0x0800,true);
+    h.setUint16(8,method,true); h.setUint16(10,dTime,true); h.setUint16(12,dDate,true);
+    h.setUint32(14,crc,true); h.setUint32(18,data.length,true); h.setUint32(22,raw.length,true);
+    h.setUint16(26,nb.length,true); h.setUint16(28,0,true);
+    parts.push(new Uint8Array(h.buffer),nb,data);
+    dir.push({nb,crc,comp:data.length,raw:raw.length,method,off});
+    off += 30+nb.length+data.length;
+  }
+  const cdStart=off, cd=[];
+  for(const c of dir){
+    const h=new DataView(new ArrayBuffer(46));
+    h.setUint32(0,0x02014b50,true); h.setUint16(4,20,true); h.setUint16(6,20,true);
+    h.setUint16(8,0x0800,true); h.setUint16(10,c.method,true); h.setUint16(12,dTime,true); h.setUint16(14,dDate,true);
+    h.setUint32(16,c.crc,true); h.setUint32(20,c.comp,true); h.setUint32(24,c.raw,true);
+    h.setUint16(28,c.nb.length,true); h.setUint16(30,0,true); h.setUint16(32,0,true);
+    h.setUint16(34,0,true); h.setUint16(36,0,true); h.setUint32(38,0,true); h.setUint32(42,c.off,true);
+    cd.push(new Uint8Array(h.buffer),c.nb); off += 46+c.nb.length;
+  }
+  const e=new DataView(new ArrayBuffer(22));
+  e.setUint32(0,0x06054b50,true); e.setUint16(4,0,true); e.setUint16(6,0,true);
+  e.setUint16(8,dir.length,true); e.setUint16(10,dir.length,true);
+  e.setUint32(12,off-cdStart,true); e.setUint32(16,cdStart,true); e.setUint16(20,0,true);
+  return new Blob([...parts,...cd,new Uint8Array(e.buffer)],{type:'application/zip'});
+}
+
+/*──────── 전체 백업 — 구글 드라이브 폴더와 동일한 파일 구성으로 ────────*/
+$('backup').addEventListener('click', async ()=>{
+  const btn=$('backup'); btn.disabled=true; const label=btn.textContent; btn.textContent='백업 만드는 중…';
+  try{
+    log('<u>▶</u> 서버 전체 백업을 만드는 중…');
+    const [r, cat] = await Promise.all([
+      adm('export', {}, { tries:1, ms:180000 }),   // 자료 전체를 모으는 무거운 작업 — 넉넉히 기다린다
+      getJson('?action=catalog', '카탈로그')
+    ]);
+    if(!r.ok)   throw new Error(r.error);
+    if(!cat.ok) throw new Error('카탈로그를 읽지 못했습니다');
+
+    /* 파일 이름을 카탈로그의 f 값 그대로 쓴다 → 드라이브 파일과 1:1로 일치 */
+    const byKey = new Map(cat.items.map(x=>[x.k, x.f]));
+    const files = [{ name:'catalog.json',
+                     text: JSON.stringify({ version: cat.version||4, updated: cat.updated, items: cat.items }) }];
+    let orphan=0;
+    r.records.forEach(rec=>{
+      const k = catKey(rec.industry, rec.jobType);
+      if(!byKey.has(k)) orphan++;
+      files.push({ name:(byKey.get(k) || slug(rec.industry, rec.jobType))+'.json', text: JSON.stringify(rec) });
+    });
+
+    const blob = await makeZip(files);
+    dl(blob, `backup-${r.records.length}건-${today()}.zip`);
+    log(`<b>✔</b> ${files.length}개 파일 · ${(blob.size/1048576).toFixed(2)}MB 저장`
+      + (orphan?` <span style="color:#fbbf24">· 카탈로그에 없는 자료 ${orphan}건 포함</span>`:''));
+    log('<u>ⓘ</u> 복구 — 압축을 풀어 구글 드라이브 <code>ergonomic-checkpoints-data</code> 폴더에 그대로 올리세요. 같은 이름 파일이 남아 있으면 <b>먼저 지워야 합니다</b>.');
+  }catch(e){ log('<s>✖</s> 백업 실패: '+esc(e.message)); }
+  finally{ btn.disabled=false; btn.textContent=label; }
+});
+function dl(blob,name){ const a=document.createElement('a'),u=URL.createObjectURL(blob);
+  a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(u); }
+
+boot();
+</script>
+</body>
+</html>
