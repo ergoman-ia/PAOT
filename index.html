@@ -1609,13 +1609,21 @@ function persistLangs() {
    ───────────────────────────────────────────────────────────────────
    이 앱은 실행할 때마다 백지에서 시작한다. 그래서 화면에서 찍은 응답과 고른 표시 언어는
    「저장하기 (CSV)」를 해야만 남는다. 그냥 새로고침하거나 창을 닫으면 사라진다.
-   모르고 날리는 일을 막기 위해 다음 세 가지를 둔다.
-     ① ⋮ 메뉴 단추에 빨간 점 — 저장하지 않은 변경이 있다는 표시
-     ② 새로고침·닫기·다른 주소로 이동할 때 브라우저가 한 번 더 물어본다
-     ③ 거기서 「머무르기」를 고르면 곧바로 저장할지 묻는다
-   ※ 브라우저 규칙상 ②의 문구는 바꿀 수 없고(각 브라우저의 기본 문구가 나온다),
-      그 창에서 바로 파일을 저장하는 것도 허용되지 않는다. 그래서 ③을 따로 둔다.
-   ※ 그럼에도 저장하지 않고 나가면 응답은 사라진다 — 그것이 이 앱의 약속이다.
+
+   ★ 묻는 방식 —
+     「변경된 사항이 있습니다. 저장하시겠습니까?」 이 한 가지만 묻는다.
+       · 예   → CSV로 저장한 뒤 하려던 일(새로고침 등)을 이어서 한다
+       · 아니오 → 저장하지 않고 그대로 진행한다 (응답은 사라진다)
+     예전에는 브라우저의 beforeunload 를 썼는데, 그러면 브라우저가 만든
+     「사이트를 다시 로드하시겠습니까?」 창이 먼저 뜬다. 그 문구는 규칙상 바꿀 수 없고
+     그 창 안에서 파일을 만들 수도 없어서, 묻는 창이 두 번 뜨는 꼴이 됐다. 그래서 걷어냈다.
+
+   ★ 잡을 수 있는 것과 없는 것 —
+     잡는다 : F5 · Ctrl+R · ⌘+R (새로고침 키), 뒤로 가기, 앱 안에서 다른 주소로 넘어갈 때
+     못 잡는다 : 브라우저 주소창 옆의 새로고침 단추, 창의 × 단추, 탭 닫기
+       → 이것들은 브라우저가 직접 처리하는 동작이라 웹 화면이 끼어들 수 없다.
+         (끼어드는 유일한 방법이 위에서 걷어낸 그 「다시 로드」 창이다)
+         이 경우에는 묻지 않고 그대로 사라진다. ⋮ 단추의 빨간 점이 사전 경고 역할을 한다.
    ═══════════════════════════════════════════════════════════════════ */
 let DIRTY = false;
 function dirtyBadge() {
@@ -1629,21 +1637,37 @@ function markDirty() { if (!DIRTY) { DIRTY = true; dirtyBadge(); } }
 /** 저장했거나, 남길 것이 없는 상태로 돌아갔다 (CSV 저장·불러오기·전체 해제·새 체크포인트 적용) */
 function markClean() { if (DIRTY) { DIRTY = false; dirtyBadge(); } }
 
-window.addEventListener('beforeunload', e => {
-  if (!DIRTY) return;
-  e.preventDefault();
-  e.returnValue = '';                 // 옛 브라우저 호환 — 이 값이 있어야 확인 창이 뜬다
-  /* 「머무르기」를 고른 경우에만 이 타이머가 살아남는다 (나갔다면 화면 자체가 사라진다).
-     그때 곧바로 저장할지 물어 준다 — 확인 창 안에서는 파일을 만들 수 없기 때문이다. */
-  setTimeout(() => { if (DIRTY) askSaveNow(); }, 200);
-});
-/** 저장할지 묻고, 예라고 하면 CSV로 내려받는다 */
-function askSaveNow() {
-  if (!DIRTY) return;
-  const n = S.pictoAns.size;
-  if (confirm(`저장하지 않은 응답이 ${n}건 있습니다.\n지금 CSV 파일로 저장할까요?\n\n(저장하지 않고 새로고침하거나 창을 닫으면 응답은 사라집니다)`))
+/** 화면을 떠나기 전에 «한 번만» 묻는다.
+ *  @param go 저장 여부와 상관없이 마지막에 실행할 동작 (새로고침·이동 등) */
+function guardLeave(go) {
+  const run = () => { try { go && go(); } catch (e) {} };
+  if (!DIRTY) { run(); return; }
+  if (confirm(`변경된 사항이 있습니다. 저장하시겠습니까?\n\n· 확인 — CSV 파일로 저장합니다\n· 취소 — 저장하지 않습니다 (응답은 사라집니다)`)) {
     saveCsv();
+    /* 파일이 만들어지는 사이에 화면을 새로 고치면 내려받기가 끊긴다 — 잠깐 기다렸다 진행한다 */
+    setTimeout(run, 800);
+  } else {
+    markClean();          // 버리기로 했으므로 같은 질문을 다시 하지 않는다
+    run();
+  }
 }
+
+/* 새로고침 «키» 가로채기 — F5 · Ctrl+R · ⌘+R.
+   브라우저가 화면을 지우기 전에 우리 질문을 먼저 띄우고, 정리가 끝나면 우리가 새로 고친다. */
+window.addEventListener('keydown', e => {
+  const reload = e.key === 'F5' || ((e.ctrlKey || e.metaKey) && (e.key === 'r' || e.key === 'R'));
+  if (!reload || !DIRTY) return;
+  e.preventDefault();
+  guardLeave(() => location.reload());
+}, true);
+
+/* 뒤로 가기 가로채기 — 되돌아갈 자리를 하나 만들어 두고, 눌리면 질문부터 한다 */
+try { history.pushState({ erg: 1 }, ''); } catch (e) {}
+window.addEventListener('popstate', () => {
+  if (!DIRTY) return;                                   // 남길 것이 없으면 그냥 보낸다
+  try { history.pushState({ erg: 1 }, ''); } catch (e) {}   // 자리를 다시 채워 화면을 붙잡는다
+  guardLeave(() => history.back());
+});
 
 /* ---------- 카드 그리기 ---------- */
 function cardHtml(id, n, opts) {
@@ -3874,7 +3898,7 @@ async function enterAdmin() {
       } catch (e) {}
       msg.style.color = '#166534';
       msg.textContent = '관리자 화면으로 이동합니다…';
-      setTimeout(() => { location.href = 'admin.html'; }, 120);
+      setTimeout(() => { guardLeave(() => { location.href = 'admin.html'; }); }, 120);
       return;
     }
 
@@ -3891,7 +3915,7 @@ async function enterAdmin() {
       })); } catch (e) {}
       msg.style.color = '#166534';
       msg.textContent = '관리자 화면으로 이동합니다…';
-      setTimeout(() => { location.href = 'admin.html'; }, 120);
+      setTimeout(() => { guardLeave(() => { location.href = 'admin.html'; }); }, 120);
       return;
     }
 
