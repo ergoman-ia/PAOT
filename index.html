@@ -128,6 +128,40 @@
         }
         .btn-menu { position: relative; }
         @media print { .btn-menu.dirty::after { display: none; } }
+
+        /* ★ 화면 아래에 붙는 저장 안내 띠 —
+           브라우저의 「다시 로드하시겠습니까?」에서 「머무르기」를 고른 뒤에 나타난다.
+           확인 창이 아니라 그냥 단추이므로, 눌러도 되고 무시해도 된다. */
+        #save-bar {
+            position: fixed;
+            left: 50%; bottom: 16px;
+            transform: translateX(-50%);
+            z-index: 2000;
+            display: flex; align-items: center; gap: 10px;
+            max-width: calc(100vw - 24px);
+            padding: 10px 12px 10px 16px;
+            background: #1f2937; color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 6px 24px rgba(0,0,0,.28);
+            font-size: .9rem;
+            animation: fadeInDown .35s ease-out;
+        }
+        #save-bar span { flex: 1 1 auto; }
+        #save-bar button {
+            flex: 0 0 auto;
+            border: none; border-radius: 6px; cursor: pointer;
+            padding: 7px 12px; font-size: .88rem; font-weight: 600;
+        }
+        #save-bar #save-bar-go { background: #16a34a; color: #fff; }
+        #save-bar #save-bar-go:hover { background: #15803d; }
+        #save-bar #save-bar-x { background: transparent; color: #d1d5db; padding: 7px 6px; }
+        #save-bar #save-bar-x:hover { color: #fff; }
+        @media print { #save-bar { display: none; } }
+
+        /* ★ 휴대전화에서 화면을 아래로 당겨 새로고침하는 동작을 막는다 —
+           체크리스트를 넘기다가 실수로 당기면 응답이 통째로 날아간다.
+           (세로 스크롤 자체는 그대로 되고, 맨 위에서 더 당기는 것만 막힌다) */
+        html, body { overscroll-behavior-y: contain; }
         .dropdown-content {
             display: none; /* Hidden by default */
             position: absolute;
@@ -1619,11 +1653,15 @@ function persistLangs() {
      그 창 안에서 파일을 만들 수도 없어서, 묻는 창이 두 번 뜨는 꼴이 됐다. 그래서 걷어냈다.
 
    ★ 잡을 수 있는 것과 없는 것 —
-     잡는다 : F5 · Ctrl+R · ⌘+R (새로고침 키), 뒤로 가기, 앱 안에서 다른 주소로 넘어갈 때
-     못 잡는다 : 브라우저 주소창 옆의 새로고침 단추, 창의 × 단추, 탭 닫기
-       → 이것들은 브라우저가 직접 처리하는 동작이라 웹 화면이 끼어들 수 없다.
-         (끼어드는 유일한 방법이 위에서 걷어낸 그 「다시 로드」 창이다)
-         이 경우에는 묻지 않고 그대로 사라진다. ⋮ 단추의 빨간 점이 사전 경고 역할을 한다.
+     ⓐ F5 · Ctrl+R · ⌘+R · 뒤로 가기 · 앱 안에서 다른 주소로 넘어갈 때
+        → 브라우저가 끼어들기 전에 우리가 먼저 잡는다. 위 질문 하나만 뜬다.
+     ⓑ 주소창 옆 새로고침 단추(↻) · 창의 × 단추 · 탭 닫기
+        → 브라우저가 직접 처리하는 동작이라 웹 화면이 먼저 잡을 방법이 없다.
+          끼어드는 길이 beforeunload 하나뿐이고, 그 창의 문구는 규칙상 바꿀 수 없다.
+          그래서 이 경우에만 브라우저 기본 창이 뜨고, 「머무르기」를 고르면
+          확인 창을 또 띄우는 대신 화면 아래에 「지금 저장」 띠를 붙인다.
+     ⓒ 휴대전화에서 화면을 아래로 당기는 새로고침 → CSS 로 아예 막아 두었다.
+   ※ ⓐ 로 나가는 길은 반드시 markClean() 을 지나므로 ⓑ 의 창이 겹쳐 뜨지 않는다 (두 번 묻지 않는다).
    ═══════════════════════════════════════════════════════════════════ */
 let DIRTY = false;
 function dirtyBadge() {
@@ -1635,7 +1673,7 @@ function dirtyBadge() {
 /** 사용자가 화면에서 무언가를 바꿨다 (응답·표시 언어) */
 function markDirty() { if (!DIRTY) { DIRTY = true; dirtyBadge(); } }
 /** 저장했거나, 남길 것이 없는 상태로 돌아갔다 (CSV 저장·불러오기·전체 해제·새 체크포인트 적용) */
-function markClean() { if (DIRTY) { DIRTY = false; dirtyBadge(); } }
+function markClean() { if (DIRTY) { DIRTY = false; dirtyBadge(); } hideSaveBar(); }
 
 /** 화면을 떠나기 전에 «한 번만» 묻는다.
  *  @param go 저장 여부와 상관없이 마지막에 실행할 동작 (새로고침·이동 등) */
@@ -1668,6 +1706,35 @@ window.addEventListener('popstate', () => {
   try { history.pushState({ erg: 1 }, ''); } catch (e) {}   // 자리를 다시 채워 화면을 붙잡는다
   guardLeave(() => history.back());
 });
+
+/* ── 마지막 그물 — 주소창 옆 새로고침 단추(↻)·창 × 단추·탭 닫기 ──
+   이 셋은 브라우저가 직접 처리해서 화면이 끼어들 틈이 beforeunload 하나뿐이다.
+   그래서 여기서만 브라우저 기본 창(「사이트를 다시 로드하시겠습니까?」)을 쓴다.
+   ★ 두 번 묻지 않는다 — 위 guardLeave 를 거치는 길(F5·뒤로 가기·관리자 이동)은
+     화면을 떠나기 전에 반드시 markClean() 을 지나므로 이 그물은 조용히 통과한다.
+   ★ 「머무르기」를 고르면 확인 창을 또 띄우지 않는다 — 대신 화면 아래에
+     「지금 저장」 단추가 달린 띠를 붙여, 누를지 말지는 사용자가 정하게 한다. */
+window.addEventListener('beforeunload', e => {
+  if (!DIRTY) return;
+  e.preventDefault();
+  e.returnValue = '';                 // 옛 브라우저 호환 — 이 값이 있어야 확인 창이 뜬다
+  /* 「머무르기」를 고른 경우에만 이 타이머가 살아남는다 (나갔다면 화면 자체가 사라진다) */
+  setTimeout(() => { if (DIRTY) showSaveBar(); }, 200);
+});
+
+/** 화면 아래에 붙는 저장 안내 띠 — 확인 창이 아니라 눌러도 되고 말아도 되는 단추다 */
+function showSaveBar() {
+  if (document.getElementById('save-bar')) return;      // 이미 떠 있으면 그대로 둔다
+  const bar = document.createElement('div');
+  bar.id = 'save-bar'; bar.className = 'no-print';
+  bar.innerHTML = `<span>변경된 사항이 있습니다. 저장하지 않고 나가면 사라집니다.</span>
+    <button type="button" id="save-bar-go">지금 저장</button>
+    <button type="button" id="save-bar-x" title="닫기">✕</button>`;
+  document.body.appendChild(bar);
+  document.getElementById('save-bar-go').addEventListener('click', () => { saveCsv(); hideSaveBar(); });
+  document.getElementById('save-bar-x').addEventListener('click', hideSaveBar);
+}
+function hideSaveBar() { const b = document.getElementById('save-bar'); if (b) b.remove(); }
 
 /* ---------- 카드 그리기 ---------- */
 function cardHtml(id, n, opts) {
