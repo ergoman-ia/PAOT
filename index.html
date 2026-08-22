@@ -71,6 +71,9 @@
         .btn-primary:hover:not(:disabled) { background-color: #1d4ed8; }
         .btn-secondary { background-color: #6b7280; color: white; }
         .btn-secondary:hover { background-color: #4b5563; }
+        /* ★ 되돌릴 수 없는 선택(저장하지 않고 나가기·초기화)에 쓰는 붉은 단추 */
+        .btn-danger { background-color: #dc2626; color: white; }
+        .btn-danger:hover:not(:disabled) { background-color: #b91c1c; }
         .btn-success { background-color: #16a34a; color: white; }
         .btn-success:hover { background-color: #15803d; }
 
@@ -689,6 +692,19 @@ details.adv summary{cursor:pointer;font-size:.88rem;color:#4b5563;font-weight:60
 </div></div>
 
 <!-- 구체적 사항 -->
+<!-- ★ 나가기·초기화 확인 모달 —
+     새로고침·창 닫기·응답 해제처럼 «지금 화면의 응답이 사라지는» 모든 길목에서 이 창 하나만 띄운다.
+     브라우저 기본 확인 창(문구를 바꿀 수 없는 그것)을 대신하는 자리다. -->
+<div id="leaveModal" class="modal"><div class="modal-content" style="max-width:460px">
+  <div class="modal-header"><h3 id="leave-title">변경된 사항이 있습니다</h3><button id="leave-x" class="modal-close">&times;</button></div>
+  <div class="modal-body"><p id="leave-msg" style="line-height:1.75;margin:0;white-space:pre-line"></p></div>
+  <div class="modal-footer" style="flex-wrap:wrap;gap:8px">
+    <button id="leave-save" class="btn btn-primary">저장하고 계속</button>
+    <button id="leave-discard" class="btn btn-danger">저장하지 않고 계속</button>
+    <button id="leave-cancel" class="btn btn-secondary">취소</button>
+  </div>
+</div></div>
+
 <div id="ideaModal" class="modal"><div class="modal-content">
   <div class="modal-header"><h3 id="modal-title">구체적인 사항</h3><button id="closeModal" class="modal-close">&times;</button></div>
   <div class="modal-body"><p id="modal-checkpoint" style="font-weight:500;margin-bottom:1rem"></p><ul id="modal-ideas" style="list-style-type:disc;padding-left:20px"></ul></div>
@@ -1644,22 +1660,23 @@ function persistLangs() {
    이 앱은 실행할 때마다 백지에서 시작한다. 그래서 화면에서 찍은 응답과 고른 표시 언어는
    「저장하기 (CSV)」를 해야만 남는다. 그냥 새로고침하거나 창을 닫으면 사라진다.
 
-   ★ 묻는 방식 —
-     「변경된 사항이 있습니다. 저장하시겠습니까?」 이 한 가지만 묻는다.
-       · 예   → CSV로 저장한 뒤 하려던 일(새로고침 등)을 이어서 한다
-       · 아니오 → 저장하지 않고 그대로 진행한다 (응답은 사라진다)
-     예전에는 브라우저의 beforeunload 를 썼는데, 그러면 브라우저가 만든
-     「사이트를 다시 로드하시겠습니까?」 창이 먼저 뜬다. 그 문구는 규칙상 바꿀 수 없고
-     그 창 안에서 파일을 만들 수도 없어서, 묻는 창이 두 번 뜨는 꼴이 됐다. 그래서 걷어냈다.
+   ★ 묻는 방식 — 앱 안의 모달 창 하나로 통일한다.
+     「변경된 사항이 있습니다」 + 세 갈래
+       · 저장하고 계속     → CSV로 저장한 뒤 하려던 일을 이어서 한다
+       · 저장하지 않고 계속 → 저장하지 않고 그대로 진행한다 (응답은 사라진다)
+       · 취소             → 아무 일도 하지 않고 화면에 머문다
+     브라우저 기본 확인 창은 문구를 바꿀 수 없고 단추도 두 개뿐이라 이 세 갈래를 담지 못한다.
 
    ★ 잡을 수 있는 것과 없는 것 —
      ⓐ F5 · Ctrl+R · ⌘+R · 뒤로 가기 · 앱 안에서 다른 주소로 넘어갈 때
-        → 브라우저가 끼어들기 전에 우리가 먼저 잡는다. 위 질문 하나만 뜬다.
+        · ⋮ 메뉴의 「응답 전체 해제」 · 「기 생성된 체크포인트」 적용
+        → 브라우저가 끼어들기 전에 우리가 먼저 잡는다. 위 모달만 뜬다.
      ⓑ 주소창 옆 새로고침 단추(↻) · 창의 × 단추 · 탭 닫기
         → 브라우저가 직접 처리하는 동작이라 웹 화면이 먼저 잡을 방법이 없다.
           끼어드는 길이 beforeunload 하나뿐이고, 그 창의 문구는 규칙상 바꿀 수 없다.
-          그래서 이 경우에만 브라우저 기본 창이 뜨고, 「머무르기」를 고르면
-          확인 창을 또 띄우는 대신 화면 아래에 「지금 저장」 띠를 붙인다.
+          이 경우에만 브라우저 기본 창이 뜨고, 「머무르기」를 고르면
+          모달을 또 띄우는 대신 화면 아래에 「지금 저장」 띠를 붙인다.
+          (이미 「머무르기」로 답한 사람에게 창을 또 띄우면 두 번 묻는 꼴이 된다)
      ⓒ 휴대전화에서 화면을 아래로 당기는 새로고침 → CSS 로 아예 막아 두었다.
    ※ ⓐ 로 나가는 길은 반드시 markClean() 을 지나므로 ⓑ 의 창이 겹쳐 뜨지 않는다 (두 번 묻지 않는다).
    ═══════════════════════════════════════════════════════════════════ */
@@ -1675,20 +1692,60 @@ function markDirty() { if (!DIRTY) { DIRTY = true; dirtyBadge(); } }
 /** 저장했거나, 남길 것이 없는 상태로 돌아갔다 (CSV 저장·불러오기·전체 해제·새 체크포인트 적용) */
 function markClean() { if (DIRTY) { DIRTY = false; dirtyBadge(); } hideSaveBar(); }
 
-/** 화면을 떠나기 전에 «한 번만» 묻는다.
- *  @param go 저장 여부와 상관없이 마지막에 실행할 동작 (새로고침·이동 등) */
-function guardLeave(go) {
+/** 화면을 떠나기 전에 «한 번만» 묻는다 — 우리 모달로.
+ *  @param go 저장 여부와 상관없이 마지막에 실행할 동작 (새로고침·이동·초기화 등)
+ *  @param o  { title, msg, save, discard } 문구 (생략하면 나가기 기본 문구) */
+async function guardLeave(go, o) {
   const run = () => { try { go && go(); } catch (e) {} };
-  if (!DIRTY) { run(); return; }
-  if (confirm(`변경된 사항이 있습니다. 저장하시겠습니까?\n\n· 확인 — CSV 파일로 저장합니다\n· 취소 — 저장하지 않습니다 (응답은 사라집니다)`)) {
-    saveCsv();
-    /* 파일이 만들어지는 사이에 화면을 새로 고치면 내려받기가 끊긴다 — 잠깐 기다렸다 진행한다 */
-    setTimeout(run, 800);
-  } else {
-    markClean();          // 버리기로 했으므로 같은 질문을 다시 하지 않는다
-    run();
+  const t = o || {};
+  if (!DIRTY) {                                  // 남길 것이 없으면 묻지 않고 진행한다
+    /* always 인 경우에만 확인을 받는다 — 저장할 것이 없으므로 「저장하고」 단추는 감추고
+       단추 문구도 「저장하지 않고 …」가 아닌 담백한 말로 바꾼다 */
+    if (t.always) {
+      const a = await askLeave({ ...t, save: null, discard: t.plain || '계속' });
+      if (a !== 'discard') return;
+    }
+    run(); return;
   }
+  const a = await askLeave(t);
+  if (a === 'cancel') return;                    // 머무른다
+  if (a === 'save') { saveCsv(); setTimeout(run, 800); return; }   // 파일이 만들어질 틈을 준다
+  markClean(); run();                            // 버리기로 했으므로 같은 질문을 다시 하지 않는다
 }
+
+/* ── 확인 모달 — confirm() 대신 앱 안의 창을 쓴다 ──
+   브라우저 기본 창은 문구를 바꿀 수 없고 단추도 두 개뿐이라
+   「저장하고 / 저장하지 않고 / 취소」 세 갈래를 담을 수 없다. */
+let LEAVE_RESOLVE = null;
+function askLeave(o) {
+  const t = o || {};
+  const n = S.pictoAns.size;
+  return new Promise(res => {
+    $('leave-title').textContent = t.title || '변경된 사항이 있습니다';
+    $('leave-msg').textContent = t.msg
+      || `화면에서 찍은 응답 ${n}건은 아직 파일로 저장되지 않았습니다.\n저장하지 않고 나가면 사라집니다.`;
+    const sv = $('leave-save');
+    if (t.save === null) { sv.style.display = 'none'; }         // 저장할 것이 없는 경우
+    else { sv.style.display = ''; sv.textContent = t.save || '저장하고 계속'; }
+    $('leave-discard').textContent = t.discard || '저장하지 않고 계속';
+    LEAVE_RESOLVE = res;
+    show('leaveModal');
+    setTimeout(() => { const b = $('leave-cancel'); if (b) b.focus(); }, 30);
+  });
+}
+function leaveAnswer(v) {
+  hide('leaveModal');
+  const r = LEAVE_RESOLVE; LEAVE_RESOLVE = null;
+  if (r) r(v);
+}
+$('leave-save').addEventListener('click', () => leaveAnswer('save'));
+$('leave-discard').addEventListener('click', () => leaveAnswer('discard'));
+$('leave-cancel').addEventListener('click', () => leaveAnswer('cancel'));
+$('leave-x').addEventListener('click', () => leaveAnswer('cancel'));
+$('leaveModal').addEventListener('click', e => { if (e.target === $('leaveModal')) leaveAnswer('cancel'); });
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && LEAVE_RESOLVE) { e.preventDefault(); leaveAnswer('cancel'); }
+}, true);
 
 /* 새로고침 «키» 가로채기 — F5 · Ctrl+R · ⌘+R.
    브라우저가 화면을 지우기 전에 우리 질문을 먼저 띄우고, 정리가 끝나면 우리가 새로 고친다. */
@@ -2104,9 +2161,18 @@ async function fscheckQuiet() {
 }
 /* 생성·배포된 파일 — 응답만 해제한다.
    본 앱 — 기본(범용) 체크포인트로 되돌리면서 응답도 함께 해제한다. */
-menu('reset-btn', () => {
+menu('reset-btn', () => guardLeave(doReset, {
+  always: true,                       // 저장할 것이 없어도 초기화는 한 번 확인한다
+  title: '초기화할까요?',
+  msg: EMBEDDED
+    ? '모든 응답(○△✕)과 표시 언어를 해제합니다.'
+    : '기본 인간공학 체크포인트(ILO)로 되돌리고, 응답(○△✕)과 표시 언어도 모두 해제합니다.',
+  save: '저장하고 초기화',
+  discard: '저장하지 않고 초기화',
+  plain: '초기화'                     // 저장할 응답이 없을 때 쓰는 담백한 문구
+}));
+function doReset() {
   if (EMBEDDED) {
-    if (!confirm('모든 응답(○△✕)을 해제할까요?')) return;
     S.pictoAns.clear(); persistPicto();
     S.langs = []; persistLangs();          // 표시 언어도 처음 상태(한국어·영어)로 되돌린다
     markClean();                           // 백지로 돌아갔으니 지킬 것이 없다
@@ -2114,7 +2180,6 @@ menu('reset-btn', () => {
     notify('응답과 표시 언어를 모두 해제했습니다.', 'info');
     return;
   }
-  if (!confirm('기본 인간공학 체크포인트(ILO)로 되돌리고, 응답(○△✕)도 모두 해제할까요?')) return;
   S.industry = ''; S.jobType = '';
   loadExpert(BASE);
   const r = selectIds(PRI, '', '');            // 기본(범용) 선별로 복귀
@@ -2132,7 +2197,7 @@ menu('reset-btn', () => {
   document.title = '인간공학 체크포인트(ILO) v2';
   fillDatalists(''); render();
   notify('기본 체크포인트(전문가용 132)로 초기화하고 응답을 모두 해제했습니다.', 'info');
-});
+}
 
 function notify(msg, type = 'success') {
   const n = document.createElement('div');
@@ -4019,8 +4084,16 @@ $('cache-accordion-container').addEventListener('click', async e => {
   }
   if (!d) return;
   if (b.classList.contains('cache-apply')) {
-    /* ★ 화면에 적용하면 지금 찍어 둔 응답이 모두 지워진다 — 저장하지 않았다면 먼저 알린다 */
-    if (DIRTY && !confirm(`저장하지 않은 응답이 ${S.pictoAns.size}건 있습니다.\n다른 체크포인트를 적용하면 이 응답은 사라집니다. 계속할까요?\n\n(취소한 뒤 ⋮ 메뉴의 「저장하기 (CSV)」로 남길 수 있습니다)`)) return;
+    /* ★ 화면에 적용하면 지금 찍어 둔 응답이 모두 지워진다 — 저장하지 않았다면 같은 모달로 먼저 묻는다 */
+    if (DIRTY) {
+      const ans = await askLeave({
+        title: '다른 체크포인트를 적용할까요?',
+        msg: `화면에서 찍은 응답 ${S.pictoAns.size}건은 아직 파일로 저장되지 않았습니다.\n다른 체크포인트를 적용하면 사라집니다.`,
+        save: '저장하고 적용', discard: '저장하지 않고 적용'
+      });
+      if (ans === 'cancel') return;
+      if (ans === 'save') { saveCsv(); await new Promise(r => setTimeout(r, 800)); }
+    }
     S.industry = d.industry; S.jobType = d.jobType;
     /* 표시 언어도 초기화 — 앞서 보던 직종에서 고른 언어를 물려받지 않고
        한국어·영어만 보이게 한다. 언어는 「🌐 표시 언어」에서 고르면 내장 번역으로 즉시 표시된다. */
