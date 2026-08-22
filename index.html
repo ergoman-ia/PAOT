@@ -114,6 +114,20 @@
         .btn-menu:hover {
             background-color: #f3f4f6;
         }
+        /* ★ 저장하지 않은 응답이 있을 때 ⋮ 메뉴 단추에 붙는 빨간 점 —
+           「CSV 저장」을 해야 남는다는 것을 화면에서 계속 알려 준다. */
+        .btn-menu.dirty { border-color: #dc2626; }
+        .btn-menu.dirty::after {
+            content: '';
+            position: absolute;
+            top: -3px; right: -3px;
+            width: 9px; height: 9px;
+            border-radius: 50%;
+            background: #dc2626;
+            border: 2px solid #fff;
+        }
+        .btn-menu { position: relative; }
+        @media print { .btn-menu.dirty::after { display: none; } }
         .dropdown-content {
             display: none; /* Hidden by default */
             position: absolute;
@@ -1577,11 +1591,59 @@ function setPictoIds(ids) {
      응답 저장소이므로, 픽토그램 20개 밖의 표(전문가·관리자) 응답도 여기 살아 있다. */
 }
 
+/* ★ 아래 두 함수가 남긴 값은 «부팅 때 다시 읽지 않는다» —
+   앱을 실행하면 언제나 백지에서 시작하도록 boot()에서 전역 상태를 초기화하고 이 키들을 지운다.
+   (같은 화면을 쓰는 동안의 임시 보관용으로만 남겨 둔다. 응답을 남기려면 「CSV 저장」을 쓴다) */
 function persistPicto() {
   /* 항목 구성(PICTO_SEL_KEY)은 더 이상 저장하지 않는다 — 20개는 업종·직종이 정한다 */
   try { localStorage.setItem(PICTO_ANS_KEY, JSON.stringify([...S.pictoAns])); } catch (e) {}
+  markDirty();
 }
-function persistLangs() { try { localStorage.setItem(PICTO_LANG_KEY, JSON.stringify(S.langs)); } catch (e) {} }
+function persistLangs() {
+  try { localStorage.setItem(PICTO_LANG_KEY, JSON.stringify(S.langs)); } catch (e) {}
+  markDirty();
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   4-c. 저장하지 않은 변경 지키기
+   ───────────────────────────────────────────────────────────────────
+   이 앱은 실행할 때마다 백지에서 시작한다. 그래서 화면에서 찍은 응답과 고른 표시 언어는
+   「저장하기 (CSV)」를 해야만 남는다. 그냥 새로고침하거나 창을 닫으면 사라진다.
+   모르고 날리는 일을 막기 위해 다음 세 가지를 둔다.
+     ① ⋮ 메뉴 단추에 빨간 점 — 저장하지 않은 변경이 있다는 표시
+     ② 새로고침·닫기·다른 주소로 이동할 때 브라우저가 한 번 더 물어본다
+     ③ 거기서 「머무르기」를 고르면 곧바로 저장할지 묻는다
+   ※ 브라우저 규칙상 ②의 문구는 바꿀 수 없고(각 브라우저의 기본 문구가 나온다),
+      그 창에서 바로 파일을 저장하는 것도 허용되지 않는다. 그래서 ③을 따로 둔다.
+   ※ 그럼에도 저장하지 않고 나가면 응답은 사라진다 — 그것이 이 앱의 약속이다.
+   ═══════════════════════════════════════════════════════════════════ */
+let DIRTY = false;
+function dirtyBadge() {
+  const b = document.getElementById('menu-toggle-btn');
+  if (!b) return;
+  b.classList.toggle('dirty', DIRTY);
+  b.title = DIRTY ? '메뉴 — 저장하지 않은 응답이 있습니다' : '메뉴';
+}
+/** 사용자가 화면에서 무언가를 바꿨다 (응답·표시 언어) */
+function markDirty() { if (!DIRTY) { DIRTY = true; dirtyBadge(); } }
+/** 저장했거나, 남길 것이 없는 상태로 돌아갔다 (CSV 저장·불러오기·전체 해제·새 체크포인트 적용) */
+function markClean() { if (DIRTY) { DIRTY = false; dirtyBadge(); } }
+
+window.addEventListener('beforeunload', e => {
+  if (!DIRTY) return;
+  e.preventDefault();
+  e.returnValue = '';                 // 옛 브라우저 호환 — 이 값이 있어야 확인 창이 뜬다
+  /* 「머무르기」를 고른 경우에만 이 타이머가 살아남는다 (나갔다면 화면 자체가 사라진다).
+     그때 곧바로 저장할지 물어 준다 — 확인 창 안에서는 파일을 만들 수 없기 때문이다. */
+  setTimeout(() => { if (DIRTY) askSaveNow(); }, 200);
+});
+/** 저장할지 묻고, 예라고 하면 CSV로 내려받는다 */
+function askSaveNow() {
+  if (!DIRTY) return;
+  const n = S.pictoAns.size;
+  if (confirm(`저장하지 않은 응답이 ${n}건 있습니다.\n지금 CSV 파일로 저장할까요?\n\n(저장하지 않고 새로고침하거나 창을 닫으면 응답은 사라집니다)`))
+    saveCsv();
+}
 
 /* ---------- 카드 그리기 ---------- */
 function cardHtml(id, n, opts) {
@@ -1954,8 +2016,11 @@ async function fscheckQuiet() {
 menu('reset-btn', () => {
   if (EMBEDDED) {
     if (!confirm('모든 응답(○△✕)을 해제할까요?')) return;
-    S.pictoAns.clear(); persistPicto(); render();
-    notify('응답을 모두 해제했습니다.', 'info');
+    S.pictoAns.clear(); persistPicto();
+    S.langs = []; persistLangs();          // 표시 언어도 처음 상태(한국어·영어)로 되돌린다
+    markClean();                           // 백지로 돌아갔으니 지킬 것이 없다
+    render();
+    notify('응답과 표시 언어를 모두 해제했습니다.', 'info');
     return;
   }
   if (!confirm('기본 인간공학 체크포인트(ILO)로 되돌리고, 응답(○△✕)도 모두 해제할까요?')) return;
@@ -1966,6 +2031,8 @@ menu('reset-btn', () => {
   S.wtext = {};                                  // 현장 맞춤 문구도 버리고 기본 문구로 돌아간다
   setPictoIds(selectWorkerPicto('', '', WP_TARGET));
   S.pictoAns.clear(); persistPicto();
+  S.langs = []; persistLangs();                   // 표시 언어도 처음 상태(한국어·영어)로 되돌린다
+  markClean();                                    // 백지로 돌아갔으니 지킬 것이 없다
   S.query = ''; const si = document.getElementById('search-input'); if (si) si.value = '';
   /* ★ 보기도 «전문가용 132»로 되돌린다 — 초기화는 처음 상태로 돌아가는 것이므로,
      관리자용·작업자용·외국인 노동자용 화면에 머물러 있으면 초기화가 된 것인지 알기 어렵다. */
@@ -1985,8 +2052,9 @@ function notify(msg, type = 'success') {
 }
 
 /* ---------- 6. CSV ---------- */
-document.getElementById('save-btn').addEventListener('click', () => {
-  dd.classList.remove('show');
+document.getElementById('save-btn').addEventListener('click', () => { dd.classList.remove('show'); saveCsv(); });
+/** 응답을 CSV 파일로 내려받는다 — ⋮ 메뉴와 「저장하지 않은 변경」 안내가 함께 쓴다 */
+function saveCsv() {
   let csv = '﻿ID,연번,범주,체크포인트,구체적인 사항,응답\n';
   const qq = s => '"' + String(s).replace(/"/g, '""') + '"';
   const ANS_LABEL = { o: 'O 잘하고 있음', m: '△ 고쳐야 함', x: 'X 해당 없음' };
@@ -2009,8 +2077,9 @@ document.getElementById('save-btn').addEventListener('click', () => {
   }
   download(new Blob([csv], { type: 'text/csv;charset=utf-8' }),
     `인간공학체크포인트_${(S.industry || '기본')}_${(S.jobType || '범용')}_${stamp()}.csv`);
+  markClean();                       // 파일로 남겼으므로 「저장하지 않은 변경」 표시를 지운다
   notify('CSV로 저장했습니다.');
-});
+}
 document.getElementById('load-btn').addEventListener('click', () => { dd.classList.remove('show'); document.getElementById('csv-file-input').click(); });
 document.getElementById('csv-file-input').addEventListener('change', ev => {
   const f = ev.target.files[0]; if (!f) return;
@@ -2035,7 +2104,9 @@ document.getElementById('csv-file-input').addEventListener('change', ev => {
       if (m) { put(id, m[1]); return; }
       if (/true\s*$/i.test(line)) put(id, 'O');       // 아주 옛 형식(조치여부 true/false) 호환
     });
-    persistPicto(); render();
+    persistPicto();
+    markClean();                     // 방금 파일에서 온 그대로이므로 저장할 것이 없다
+    render();
     notify(`CSV를 불러왔습니다. (응답 ${n}건)`, 'info');
   };
   r.readAsText(f, 'UTF-8'); ev.target.value = '';
@@ -3185,6 +3256,7 @@ function finish(flat, managerIds, workerIds, industry, jobType, t0, source, sele
      (필요한 언어는 「🌐 표시 언어」에서 고르면 내장 번역표로 즉시 표시된다) */
   S.langs = []; persistLangs();
   setPictoIds(rec.pictoIds); S.pictoAns.clear(); persistPicto();
+  markClean();                              // 새 체크포인트로 갈아탔으니 지킬 응답이 없다
   $('app-title').textContent = `${industry} - ${jobType} 인간공학 체크포인트`;
   fillDatalists(); render();
   /* 완료 표시 — 진행바를 채우고 한 줄로 알린다 */
@@ -3856,6 +3928,8 @@ $('cache-accordion-container').addEventListener('click', async e => {
   }
   if (!d) return;
   if (b.classList.contains('cache-apply')) {
+    /* ★ 화면에 적용하면 지금 찍어 둔 응답이 모두 지워진다 — 저장하지 않았다면 먼저 알린다 */
+    if (DIRTY && !confirm(`저장하지 않은 응답이 ${S.pictoAns.size}건 있습니다.\n다른 체크포인트를 적용하면 이 응답은 사라집니다. 계속할까요?\n\n(취소한 뒤 ⋮ 메뉴의 「저장하기 (CSV)」로 남길 수 있습니다)`)) return;
     S.industry = d.industry; S.jobType = d.jobType;
     /* 표시 언어도 초기화 — 앞서 보던 직종에서 고른 언어를 물려받지 않고
        한국어·영어만 보이게 한다. 언어는 「🌐 표시 언어」에서 고르면 내장 번역으로 즉시 표시된다. */
@@ -3864,6 +3938,7 @@ $('cache-accordion-container').addEventListener('click', async e => {
     /* 작업자용은 코드가 다시 고른다 — 보관된 목록이 있으면 그것을 쓴다 */
     setPictoIds((d.pictoIds && d.pictoIds.length) ? d.pictoIds : selectWorkerPicto(d.industry, d.jobType, WP_TARGET));
     S.pictoAns.clear(); persistPicto();
+    markClean();                              // 새 체크포인트로 갈아탔으니 지킬 응답이 없다
     $('app-title').textContent = `${d.industry} - ${d.jobType} 인간공학 체크포인트`;
     hide('cacheListModal'); render(); notify('화면에 적용했습니다.');
   } else if (b.classList.contains('cache-html')) {
@@ -3909,22 +3984,26 @@ function exportHtml(payload) {
 (function boot() {
   syncJobField(); fillDatalists('');           // 입력창 초기 안내 문구
 
-  /* ── 응답·언어 초기화 ──
-     ① 파일에 내장된 값 → ② 이 브라우저에 저장해 둔 값 → ③ 추천값 순서로 살린다. */
-  /* «이 파일에서» 언어를 고른 적이 있는지 — 있으면 그 선택을 존중하고, 없으면 파일 기본값을 쓴다 */
-  let langSaved = false;
+  /* ── ★ 실행할 때마다 «표시 언어»와 «응답»을 전역 상태에서 완전히 초기화한다 ──
+     예전에는 브라우저에 저장해 둔 값을 되살렸다. 그래서 한 번 골라 둔 외국어가
+     다음에 열 때도 계속 체크된 채로 나타났고, 앞사람이 찍어 둔 ○△✕도 그대로 남았다.
+     현장에서 쓰는 체크리스트는 «열 때마다 백지»여야 하므로 다음을 지킨다.
+       · 표시 언어  = 아무것도 선택하지 않음 (카드에는 한국어·영어만 나온다)
+       · 응답(○△✕) = 전부 해제
+     이 규칙은 기본 인간공학 체크포인트(ILO)든, 생성·배포된 맞춤형 파일이든 똑같이 적용한다.
+     저장해 둔 응답을 다시 보려면 ⋮ 메뉴의 「CSV 불러오기」를 쓴다. */
+  S.langs = [];
+  S.pictoAns.clear();
+  /* 브라우저에 남아 있던 옛 기록도 함께 지운다 — 같은 주소에서 여러 맞춤형 파일을 열면
+     파일마다 키가 따로 쌓이므로, 접두사가 같은 키를 모두 훑어 정리한다. */
   try {
-    const s = localStorage.getItem(PICTO_LANG_KEY);
-    if (s) { S.langs = JSON.parse(s).filter(c => LANG_OF.has(c)); langSaved = true; }
-  } catch (e) {}
-  try { const s = localStorage.getItem(PICTO_ANS_KEY); if (s) JSON.parse(s).forEach(([id, v]) => S.pictoAns.set(+id, v)); } catch (e) {}
-  /* 옛 「조치여부」(켬/끔) 기록 이관 — 켜져 있던 항목은 ○ 응답으로 한 번만 옮기고 키를 지운다 */
-  try {
-    const s = localStorage.getItem(CHECK_KEY);
-    if (s) {
-      JSON.parse(s).forEach(id => { if (!S.pictoAns.has(+id)) S.pictoAns.set(+id, 'o'); });
-      localStorage.removeItem(CHECK_KEY); persistPicto();
+    const STALE = ['ergPictoAns_v1', 'ergPictoLang_v1', 'ergPictoSel_v1', 'ergCheckState_v2'];
+    const kill = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && STALE.some(p => k.indexOf(p) === 0)) kill.push(k);
     }
+    kill.forEach(k => localStorage.removeItem(k));
   } catch (e) {}
 
   if (EMBEDDED) {
@@ -3933,9 +4012,11 @@ function exportHtml(payload) {
     loadExpert(EMBEDDED.expert);
     S.managerIds = EMBEDDED.managerIds;
     S.wtext = EMBEDDED.wtext || {};
-    /* 배포된 파일의 기본 표시 언어 — 이 파일에서 직접 고른 적이 없을 때만 적용한다.
-       (내장값이 비어 있으면 한국어·영어만 보여준다 — 다른 파일의 선택을 물려받지 않는다) */
-    if (!langSaved) S.langs = ((EMBEDDED.langs || []).filter(c => LANG_OF.has(c)));
+    /* ★ 표시 언어는 파일에 내장된 값(EMBEDDED.langs)도 쓰지 않는다 —
+       생성 당시 고른 언어가 배포본에 실려 있어도, 파일을 여는 순간에는 아무것도 체크하지 않는다.
+       현장마다 필요한 언어가 다르므로 「🌐 표시 언어」에서 그때그때 고르게 한다.
+       (내장 번역표는 그대로 실려 있어 고르는 즉시 카드에 나타난다) */
+    S.langs = [];
     const emb = (EMBEDDED.pictoIds && EMBEDDED.pictoIds.length) ? EMBEDDED.pictoIds
               : (EMBEDDED.workerIds || []).filter(id => WP.has(id));
     setPictoIds(emb.length ? emb : selectWorkerPicto(S.industry, S.jobType, WP_TARGET));
@@ -3960,6 +4041,9 @@ function exportHtml(payload) {
   /* 픽토그램 항목 구성은 더 이상 브라우저 저장값을 쓰지 않는다 —
      작업자용 20 = 픽토그램 20 은 언제나 업종·직종이 정한다. 옛 저장값은 지운다. */
   try { localStorage.removeItem(PICTO_SEL_KEY); } catch (e) {}
+  /* 부팅 과정에서 persistPicto()·persistLangs() 가 불려 표시가 켜졌을 수 있다 —
+     아직 사용자가 손댄 것은 없으므로 「저장하지 않은 변경」 표시를 끄고 시작한다. */
+  markClean(); dirtyBadge();
   render();
 })();
 </script>
