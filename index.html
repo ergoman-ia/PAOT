@@ -2394,7 +2394,8 @@ const GEN_BUDGET = { on: false, req: 0, t0: 0, maxReq: 20, maxMs: 180000 };
 /* 이번 생성이 실제로 «성공» 응답을 받은 모델 — 완료 화면에 그대로 보여준다 */
 const GEN_USED = { sel: new Set(), rw: new Set() };
 function budgetStart() { GEN_BUDGET.on = true; GEN_BUDGET.req = 0; GEN_BUDGET.t0 = Date.now();
-                         GEN_USED.sel.clear(); GEN_USED.rw.clear(); }
+                         GEN_USED.sel.clear(); GEN_USED.rw.clear();
+                         Object.keys(THINK_BAD).forEach(k => delete THINK_BAD[k]); }
 function budgetStop()  { GEN_BUDGET.on = false; }
 function budgetCheck() {
   if (!GEN_BUDGET.on) return;
@@ -2408,18 +2409,31 @@ function budgetCheck() {
 }
 
 /* ★★ 사고(thinking) 수준 — 세대마다 «필드 이름이 다르다».
-     · 3.x  → generationConfig.thinkingLevel ('minimal' | 'low' | 'medium' | 'high')
+     · 3.x  → generationConfig.thinkingConfig.thinkingLevel ('minimal' | 'low' | 'medium' | 'high')
      · 2.5  → generationConfig.thinkingConfig.thinkingBudget (0 이면 끔)
    132문항을 «고정 스키마»로 다시 쓰는 작업이라 추론은 최소가 맞다 — 속도도 토큰도 이득이다.
    기본값에 맡기면 안 되는 이유: 같은 lite 라도 3.5-flash-lite 는 기본이 minimal,
    3-flash-preview 는 기본이 high 다. 명시하지 않으면 모델을 바꿀 때마다 속도가 널뛴다.
    승급(up=true)일 때만 한 단계 올린다 — 그때는 lite 가 지시를 못 따라간 상황이므로. */
 function thinkCfg(model, up) {
-  if (/^gemini-3/.test(model))       return { thinkingLevel: up ? 'low' : 'minimal' };
+  /* ★ 위치 주의 — generateContent 에서는 thinkingLevel 이 «thinkingConfig 안»에 들어간다.
+     generationConfig 바로 밑에 넣으면 400 이 난다:
+       Unknown name "thinkingLevel" at 'generation_config': Cannot find field.
+     (Interactions API 는 generation_config.thinking_level 로 형태가 다르다 — 섞지 말 것)
+     thinkingLevel 과 thinkingBudget 을 함께 보내도 400 이므로 하나만 넣는다. */
+  if (/^gemini-3/.test(model))       return { thinkingConfig: { thinkingLevel: up ? 'low' : 'minimal' } };
   if (/^gemini-2\.5-flash$/.test(model)) return { thinkingConfig: { thinkingBudget: up ? 1024 : 0 } };
   return null;                                    // 2.5-flash-lite 등 — 기본이 이미 꺼져 있다
 }
+/* ★★ 사고 설정을 거부한 모델을 이 생성 동안 기억한다.
+   이게 없으면 12묶음이 «저마다» 400 을 한 번씩 맞고 벗기느라 12건이 그냥 날아간다 —
+   GEN_BUDGET 이 20건이라 그것만으로 예산이 바닥난다. 한 묶음이 맞으면 나머지는 붙이지 않는다. */
+const THINK_BAD = {};
+/** 이 400 이 «사고 설정 필드» 때문인가 — 구글의 문구로 판단한다.
+    예) Unknown name "thinkingLevel" at 'generation_config': Cannot find field. */
+const isThinkFieldErr = m => /thinking[_]?(level|budget|config)/i.test(m || '');
 function withThinking(payload, model, up) {
+  if (THINK_BAD[model]) return payload;
   const t = thinkCfg(model, up);
   if (!t) return payload;
   return { ...payload, generationConfig: { ...(payload.generationConfig || {}), ...t } };
@@ -2460,8 +2474,10 @@ async function callGemini(payload, tries = 2, chainIn, waitCap, tag, think) {
             });
           } catch (x) {}
           /* ★ 사고 설정이 원인일 수 있는 400 — 그것만 빼고 같은 모델로 다시 (요청 1건 소모) */
-          if (res.status === 400 && !noThink && thinkCfg(model, think === 'up')) {
+          if (res.status === 400 && !noThink && thinkCfg(model, think === 'up')
+              && (isThinkFieldErr(detail) || !THINK_BAD[model])) {
             noThink = true;
+            THINK_BAD[model] = true;        // ★ 나머지 묶음은 아예 붙이지 않는다 (예산 보호)
             console.warn(`${model}: 사고 설정을 인식하지 못해 빼고 재시도합니다`, detail.slice(0, 300));
             i--;                                                       // 이 시도는 횟수로 세지 않는다
             continue;
