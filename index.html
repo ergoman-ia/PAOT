@@ -816,9 +816,8 @@ details.adv summary{cursor:pointer;font-size:.88rem;color:#4b5563;font-weight:60
 <div id="fallbackModal" class="modal"><div class="modal-content" style="max-width:440px">
   <div class="modal-header"><h3>다른 모델로 생성할까요?</h3></div>
   <div class="modal-body">
-    <p style="margin:0 0 8px">기본 모델(Gemini 3.5 Flash-Lite)을 지금 사용할 수 없습니다 — 분당·일일 한도 또는 과부하입니다.</p>
-    <p class="mini" style="margin:0">다음 모델(Gemini 3.1 Flash-Lite → Gemini 2.5 Flash)로 이어서 생성합니다.
-      일일 한도가 남아 있을 쪽이라 대부분 이어서 완료되지만, 문장 품질이 조금 낮아질 수 있습니다.</p>
+    <p id="fallbackWhere" style="margin:0 0 8px"></p>
+    <p id="fallbackChain" class="mini" style="margin:0"></p>
   </div>
   <div class="modal-footer">
     <button id="fallbackYes" class="btn btn-primary">다음 모델로 생성</button>
@@ -2750,9 +2749,24 @@ function progStop(done) {
   if (done) $('progress-bar-main').style.width = '100%';
 }
 /* 하위 모델 사용 확인 — 별도 창으로 묻는다 */
-function askFallback() {
+/* where: 'server' 면 서버가 생성 중이라 «서버의 체인»을 쓴다 — 브라우저의 MODEL_CHAIN 과 다를 수 있다.
+   예전에는 이 문구가 브라우저 체인 이름을 그대로 박아 두어, 서버가 옛 체인으로 폴백했는데도
+   화면에는 새 모델 이름이 떠서 「3.5가 소진됐다는데 결과는 2.5」 같은 혼선이 났다. */
+function askFallback(where, serverMsg) {
   return new Promise(resolve => {
     const box = document.getElementById('fallbackModal');
+    const srv = (where === 'server');
+    const short = m => String(m).replace('gemini-', 'Gemini ');
+    $('fallbackWhere').innerHTML = srv
+      ? (serverMsg ? `<b>공용 서버</b> — ${esc(serverMsg)}`
+                   : '<b>공용 서버</b>의 기본 모델을 지금 사용할 수 없습니다 — 분당·일일 한도 또는 과부하입니다.')
+      : `기본 모델(<b>${esc(short(MODEL_CHAIN[0]))}</b>)을 지금 사용할 수 없습니다 — 분당·일일 한도 또는 과부하입니다.`;
+    $('fallbackChain').innerHTML = srv
+      ? '서버가 자기 순서대로 다음 모델로 이어서 생성합니다. '
+        + '<b>서버의 모델 순서는 이 화면(브라우저)의 설정과 다를 수 있습니다</b> — '
+        + '실제로 쓰인 모델은 완료 뒤 「사용 모델」 줄에서 확인하세요.'
+      : `다음 모델(${esc(MODEL_CHAIN.slice(1).map(short).join(' → '))})로 이어서 생성합니다. `
+        + '일일 한도가 남아 있을 쪽이라 대부분 이어서 완료되지만, 문장 품질이 조금 낮아질 수 있습니다.';
     const yes = $('fallbackYes'), no = $('fallbackNo');
     const close = v => {
       hide('fallbackModal');
@@ -3088,11 +3102,15 @@ $('applyAiConfigBtn').addEventListener('click', async () => {
         /* ★ 기본 모델을 지금 쓸 수 없는 경우(소진·지속 한도) — 자동으로 내려가지 않고 별도 창으로 묻는다 */
         if (r && r.needFallback) {
           progStop();
-          const yes = await askFallback();
+          /* 서버가 보내온 사유를 그대로 보여 준다 — 서버의 체인은 이 화면 설정과 별개이므로,
+             여기서 브라우저의 모델 이름을 지어내면 화면과 실제가 어긋난다. */
+          const yes = await askFallback('server', r.error);
           if (!yes) throw Object.assign(new Error('생성 취소'), { userCancelled: true });
           progStart(t0);
+          /* ★ hiq 를 반드시 함께 보낸다 — 예전에는 여기서 빠져, 「품질 우선」을 켜고 확인을 눌러도
+             서버가 일반 체인으로 되돌아갔다(확인 창을 거치면 설정이 조용히 풀리는 버그). */
           r = await api({ action: 'generate', industry, jobType, managerIds, workerIds,
-                          aiSelect: true, force: false, allowFallback: true });
+                          aiSelect: true, force: false, allowFallback: true, hiq: HIQ });
         }
         if (r && r.quotaExhausted) throw Object.assign(new Error(r.error), { quotaExhausted: true });
         if (r && r.rpmLimited)     throw Object.assign(new Error(r.error), { rpmLimited: true });
@@ -3448,10 +3466,11 @@ function finish(flat, managerIds, workerIds, industry, jobType, t0, source, sele
   const short = m => String(m).replace('gemini-', '');
   let modelLine = '';
   if (Array.isArray(x.models) && x.models.length)
-    modelLine = `사용 모델 — 항목 선정: ${((x.selModels || []).map(short).map(esc).join(' → ')) || '–'}`
-              + ` · 문항 재작성: ${x.models.map(short).map(esc).join(' → ')} (서버 생성)`;
+    modelLine = `<b>공용 서버</b>가 생성 — 항목 선정: ${((x.selModels || []).map(short).map(esc).join(' → ')) || '–'}`
+              + ` · 문항 재작성: ${x.models.map(short).map(esc).join(' → ')}`
+              + ` <span style="color:#92400e">(서버의 모델 순서는 이 화면 설정과 별개입니다)</span>`;
   else if (GEN_USED.sel.size || GEN_USED.rw.size)
-    modelLine = `사용 모델 — 항목 선정: ${[...GEN_USED.sel].map(short).map(esc).join(', ') || '–'}`
+    modelLine = `<b>이 브라우저</b>가 생성 — 항목 선정: ${[...GEN_USED.sel].map(short).map(esc).join(', ') || '–'}`
               + ` · 문항 재작성: ${[...GEN_USED.rw].map(short).map(esc).join(' → ') || '–'}`;
   if (source === '공용' || source === '보관본')
     modelLine = '기존 자료 재사용 — 이번에는 AI를 부르지 않았습니다';
@@ -3517,7 +3536,24 @@ function applyRecord(d) {
 
 const cacheKey = (i, j) => 'ergV2::' + i.trim().toLowerCase() + '::' + j.trim().toLowerCase();
 function readCache(key) { try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : null; } catch (e) { return null; } }
-function saveCache(key, obj) { try { localStorage.setItem(key, JSON.stringify(obj)); } catch (e) { console.warn('캐시 저장 실패(용량)', e); } }
+/* ★ 생성일자 — 예전 보관본에는 이 값이 없다. 새로 저장하는 것부터 찍어 둔다.
+   이미 값이 있으면 덮어쓰지 않는다(다시 저장한다고 «생성»일이 바뀌면 안 된다). */
+function saveCache(key, obj) {
+  try {
+    if (obj && typeof obj === 'object' && !obj.savedAt) obj.savedAt = new Date().toISOString();
+    localStorage.setItem(key, JSON.stringify(obj));
+  } catch (e) { console.warn('캐시 저장 실패(용량)', e); }
+}
+/** 여러 이름으로 올 수 있는 날짜 값을 「2026.02.15.」로 — 못 읽으면 빈 문자열 */
+function genDate(o) {
+  if (!o) return '';
+  const raw = o.savedAt || o.createdAt || o.created || o.updated || o.date || o.at || o.t || o.d;
+  if (!raw) return '';
+  const d = new Date(typeof raw === 'number' && raw < 1e12 ? raw * 1000 : raw);
+  if (isNaN(d)) return '';
+  const p = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}.${p(d.getMonth() + 1)}.${p(d.getDate())}.`;
+}
 
 /** 공용 서버에 등록되지 않은 결과는 보관하지 않는다.
  *  (서버 모드에서 임시본을 남기면 '나에게만 보이는 항목'이 계속 쌓인다) */
@@ -3913,12 +3949,17 @@ function fillDatalists(industryFilter) {
 /** 공용 카탈로그 + 내 브라우저 보관본을 하나의 목록으로 */
 function mergedList() {
   const out = new Map();
-  CATALOG.forEach(x => out.set(x.k, { industry: x.i, jobType: x.j, file: x.f, shared: true, local: false }));
+  /* 공용 항목의 날짜는 서버가 어떤 이름으로 주든 genDate() 가 알아서 읽는다.
+     서버가 날짜를 아예 안 보내면 빈 값이 되고, 아래에서 그 줄만 표시를 건너뛴다. */
+  CATALOG.forEach(x => out.set(x.k, { industry: x.i, jobType: x.j, file: x.f, shared: true, local: false,
+                                      date: genDate(x) }));
   allCache().forEach(x => {
     const k = catKey(x.industry, x.jobType);
     const prev = out.get(k);
-    if (prev) prev.local = true;
-    else out.set(k, { industry: x.industry, jobType: x.jobType, file: null, shared: false, local: true });
+    /* 공용에 날짜가 없으면 내 보관본의 날짜라도 쓴다 */
+    if (prev) { prev.local = true; if (!prev.date) prev.date = genDate(x); }
+    else out.set(k, { industry: x.industry, jobType: x.jobType, file: null, shared: false, local: true,
+                      date: genDate(x) });
   });
   return [...out.values()].sort((a, b) => (a.industry + a.jobType).localeCompare(b.industry + b.jobType));
 }
@@ -3957,7 +3998,8 @@ function loadCacheList() {
           <span><b>${esc(x.jobType)}</b>
             <span class="chip ${x.shared ? 'ok' : 'warn'}" style="padding:2px 8px;font-size:.72rem;margin-left:6px">${x.shared ? '공용' : '임시'}</span>
             ${x.shared && !x.local ? '<span class="mini"> · 미다운로드</span>' : ''}</span>
-          <span style="display:flex;gap:6px;flex-shrink:0">
+          <span style="display:flex;gap:6px;align-items:center;flex-shrink:0">
+            ${x.date ? `<span class="mini" style="color:#475569;white-space:nowrap">생성일자 : ${esc(x.date)}</span>` : ''}
             <button class="btn cache-apply" data-i="${esc(x.industry)}" data-j="${esc(x.jobType)}" style="background:#dcfce7;color:#166534;padding:4px 10px;font-size:.85rem">화면에 적용</button>
             <button class="btn cache-html" data-i="${esc(x.industry)}" data-j="${esc(x.jobType)}" style="background:#e0e7ff;color:#3730a3;padding:4px 10px;font-size:.85rem">HTML 생성</button>
           </span></div>`).join('')}
