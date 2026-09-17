@@ -2342,18 +2342,18 @@ const CHANGED_MIN = Math.ceil(132 * 0.8);   // 106문항
    2.5-flash-lite 도 뺐다 — 2026-10-16 종료 예정이고, 죽은 이름은 404 를 내는데
    404 는 fatal 로 잡히지 않아 재시도 2회를 헛되이 쓴다.
      · 재작성 12건 → 3.5-flash-lite (minimal 사고 · 큰 한도)
-     · 한도 폴백    → 3.1-flash-lite → 2.5-flash (뒤로 갈수록 한도가 남아 있을 쪽)
+     · 한도 폴백    → 3.1-flash-lite → 3-flash-preview (뒤로 갈수록 한도가 남아 있을 쪽)
      · 품질 승급    → 3.5-flash (원문 그대로가 남은 한두 묶음에만 소량 투입) */
-const MODEL_CHAIN = ['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite', 'gemini-2.5-flash'];   // applyHiq() 가 순서를 바꾼다
+const MODEL_CHAIN = ['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite', 'gemini-3-flash-preview'];   // applyHiq() 가 순서를 바꾼다
 /* 품질 승급 전용 — 「원문 그대로」가 남은 묶음을 다시 맡길 «더 좋은» 모델 순서.
    한도 폴백(MODEL_CHAIN)과 방향이 다르다: 폴백은 한도가 남은 쪽으로, 승급은 품질이 높은 쪽으로.
    ★ 승급은 lite 가 지시를 못 따라간 경우이므로, 사고 수준도 함께 올린다(thinkCfg 의 up 인자). */
 const UPGRADE_CHAIN = ['gemini-3.5-flash'];
 /* 항목 선정 전용 — ★ 여기는 «품질»이 아니라 «확실성»을 고른다.
    선정이 실패하면 재작성을 시작도 못 하고 생성 전체가 중단되는 단일 실패점이기 때문이다.
-   그래서 가장 새 모델이 아니라 «이 앱에서 실제로 성공한 이력이 있는» 2.5-flash 를 앞에 둔다.
+   그래서 가장 새 모델이 아니라 «이 앱에서 실제로 성공한 이력이 있는» 3.1-flash 를 앞에 둔다.
    (요청이 1건뿐이라 한도 부담이 없다는 점은 그대로다) */
-const SELECT_CHAIN = ['gemini-2.5-flash', 'gemini-3.1-flash-lite', 'gemini-3.5-flash-lite'];
+const SELECT_CHAIN = ['gemini-3.1-flash-lite', 'gemini-3.5-flash-lite','gemini-3-flash-preview'];
 let MODEL_IDX = 0;
 let SERVER_DOWN = false;   // 서버 키 문제를 확인하면 이 세션에서는 서버 호출을 건너뛴다
 const modelNow = () => MODEL_CHAIN[MODEL_IDX];
@@ -2368,7 +2368,7 @@ function applyHiq(on) {
   HIQ = !!on;
   MODEL_CHAIN.length = 0;
   (HIQ ? ['gemini-3.5-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite']
-       : ['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite', 'gemini-2.5-flash'])
+       : ['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite', 'gemini-3-flash-preview'])
     .forEach(m => MODEL_CHAIN.push(m));
   UPGRADE_CHAIN.length = 0;
   UPGRADE_CHAIN.push('gemini-3.5-flash');
@@ -2421,9 +2421,8 @@ function thinkCfg(model, up) {
        Unknown name "thinkingLevel" at 'generation_config': Cannot find field.
      (Interactions API 는 generation_config.thinking_level 로 형태가 다르다 — 섞지 말 것)
      thinkingLevel 과 thinkingBudget 을 함께 보내도 400 이므로 하나만 넣는다. */
-  if (/^gemini-3/.test(model))       return { thinkingConfig: { thinkingLevel: up ? 'low' : 'minimal' } };
-  if (/^gemini-2\.5-flash$/.test(model)) return { thinkingConfig: { thinkingBudget: up ? 1024 : 0 } };
-  return null;                                    // 2.5-flash-lite 등 — 기본이 이미 꺼져 있다
+ if (/^gemini-3/.test(model)) return { thinkingConfig: { thinkingLevel: up ? 'low' : 'minimal' } };
+  return null;   // 3.x 가 아닌 모델에는 사고 설정을 붙이지 않는다
 }
 /* ★★ 사고 설정을 거부한 모델을 이 생성 동안 기억한다.
    이게 없으면 12묶음이 «저마다» 400 을 한 번씩 맞고 벗기느라 12건이 그냥 날아간다 —
